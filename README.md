@@ -1,4 +1,4 @@
-# Technical Design Document: Decentralized Energy Grid on Solana
+# Stellar Build-A-Thon Delhi NCR: Decentralized Energy Grid on Solana
 ## Introduction
 ### Purpose
 - Define the architecture for a blockchain-based peer-to-peer energy trading platform
