@@ -1,0 +1,117 @@
+import * as anchor from "@project-serum/anchor";
+import { Program } from "@project-serum/anchor";
+import { DecentralizedEnergyGrid } from "../target/types/decentralized_energy_grid";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
+describe("decentralized-energy-grid", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+
+  const program = anchor.workspace.DecentralizedEnergyGrid as Program<DecentralizedEnergyGrid>;
+  
+  const communityName = "GreenVillage";
+  const producerName = "SolarHome";
+  const consumerName = "EnergyUser";
+
+  let communityPda: anchor.web3.PublicKey;
+  let energyTokenMint: anchor.web3.PublicKey;
+  let producerPda: anchor.web3.PublicKey;
+  let consumerPda: anchor.web3.PublicKey;
+
+  it("Initializes the community", async () => {
+    const [community, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("community"), provider.wallet.publicKey.toBuffer()],
+      program.programId
+    );
+    communityPda = community;
+
+    const [tokenMint, tokenBump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("energy_token_mint"), community.toBuffer()],
+      program.programId
+    );
+    energyTokenMint = tokenMint;
+
+    await program.methods
+      .initializeCommunity(communityName)
+      .accounts({
+        authority: provider.wallet.publicKey,
+        community: communityPda,
+        energyTokenMint: energyTokenMint,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    console.log("Community initialized!");
+  });
+
+  it("Registers a producer", async () => {
+    const [resident, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("resident"), provider.wallet.publicKey.toBuffer(), communityPda.toBuffer()],
+      program.programId
+    );
+    producerPda = resident;
+
+    await program.methods
+      .registerResident({ producer: {} }, producerName)
+      .accounts({
+        authority: provider.wallet.publicKey,
+        community: communityPda,
+        resident: producerPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("Producer registered!");
+  });
+
+  it("Mints energy tokens", async () => {
+    const kwhAmount = new anchor.BN(5); // 5 kWh
+    
+    // Get associated token account
+    const producerTokenAccount = await anchor.utils.token.associatedAddress({
+      mint: energyTokenMint,
+      owner: producerPda,
+    });
+
+    await program.methods
+      .mintEnergyTokens(kwhAmount)
+      .accounts({
+        authority: provider.wallet.publicKey,
+        resident: producerPda,
+        community: communityPda,
+        energyTokenMint: energyTokenMint,
+        residentTokenAccount: producerTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    console.log("Energy tokens minted!");
+  });
+
+  it("Registers a consumer", async () => {
+    // Create a new keypair for consumer
+    const consumerKeypair = anchor.web3.Keypair.generate();
+    
+    const [resident, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("resident"), consumerKeypair.publicKey.toBuffer(), communityPda.toBuffer()],
+      program.programId
+    );
+    consumerPda = resident;
+
+    await program.methods
+      .registerResident({ consumer: {} }, consumerName)
+      .accounts({
+        authority: consumerKeypair.publicKey,
+        community: communityPda,
+        resident: consumerPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([consumerKeypair])
+      .rpc();
+
+    console.log("Consumer registered!");
+  });
+});
