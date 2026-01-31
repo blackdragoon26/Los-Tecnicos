@@ -49,6 +49,42 @@ impl Marketplace {
     pub fn get_order(env: Env, order_id: u64) -> Option<EnergyOrder> {
         env.storage().persistent().get(&DataKey::Order(order_id))
     }
+
+    pub fn match_orders(env: Env, sell_id: u64, buy_id: u64) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+
+        let mut sell_order = self::get_order(env.clone(), sell_id).expect("sell order not found");
+        let mut buy_order = self::get_order(env.clone(), buy_id).expect("buy order not found");
+
+        if sell_order.status != OrderStatus::Open || buy_order.status != OrderStatus::Open {
+            panic!("orders must be open");
+        }
+
+        if sell_order.order_type != OrderType::Sell || buy_order.order_type != OrderType::Buy {
+            panic!("invalid order types for matching");
+        }
+
+        if sell_order.kwh_amount != buy_order.kwh_amount {
+            panic!("amounts must match");
+        }
+
+        if buy_order.price_per_kwh < sell_order.price_per_kwh {
+            panic!("buy price too low");
+        }
+
+        // Logic for token transfer would go here if energy token was integrated.
+        // For now, we update the status.
+        sell_order.status = OrderStatus::Completed;
+        buy_order.status = OrderStatus::Completed;
+
+        env.storage().persistent().set(&DataKey::Order(sell_id), &sell_order);
+        env.storage().persistent().set(&DataKey::Order(buy_id), &buy_order);
+    }
+}
+
+pub fn get_order(env: Env, order_id: u64) -> Option<EnergyOrder> {
+    env.storage().persistent().get(&DataKey::Order(order_id))
 }
 
 mod test {
@@ -74,5 +110,31 @@ mod test {
         assert_eq!(order_id, 1);
         let order = client.get_order(&1).unwrap();
         assert_eq!(order.kwh_amount, 50);
+    }
+
+    #[test]
+    fn test_match_orders() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let seller = Address::generate(&env);
+        let buyer = Address::generate(&env);
+        let token_addr = Address::generate(&env);
+
+        let contract_id = env.register(Marketplace, ());
+        let client = MarketplaceClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &token_addr);
+        
+        env.mock_all_auths();
+        let sell_id = client.create_order(&seller, &OrderType::Sell, &50, &10, &String::from_str(&env, "device1"));
+        let buy_id = client.create_order(&buyer, &OrderType::Buy, &50, &12, &String::from_str(&env, "device2"));
+
+        client.match_orders(&sell_id, &buy_id);
+
+        let sell_order = client.get_order(&sell_id).unwrap();
+        let buy_order = client.get_order(&buy_id).unwrap();
+
+        assert_eq!(sell_order.status, OrderStatus::Completed);
+        assert_eq!(buy_order.status, OrderStatus::Completed);
     }
 }

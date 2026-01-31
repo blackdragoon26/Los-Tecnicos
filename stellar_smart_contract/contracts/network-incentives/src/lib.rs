@@ -57,3 +57,31 @@ impl NetworkIncentives {
         env.storage().persistent().get(&DataKey::Node(node_id))
     }
 }
+
+mod test {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::Env;
+
+    #[test]
+    fn test_network_incentives() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let operator = Address::generate(&env);
+        let node_id = String::from_str(&env, "pi-01");
+
+        let contract_id = env.register(NetworkIncentives, ());
+        let client = NetworkIncentivesClient::new(&env, &contract_id);
+
+        client.initialize(&admin);
+        client.register_node(&node_id, &operator);
+
+        client.report_activity(&node_id, &500);
+
+        let node = client.get_node_info(&node_id).unwrap();
+        assert_eq!(node.packets_routed, 500);
+        assert_eq!(node.rewards_earned, 5); // 500 / 100 = 5
+    }
+}

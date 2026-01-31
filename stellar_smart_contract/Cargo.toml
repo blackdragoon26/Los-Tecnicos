@@ -3,6 +3,7 @@ members = [
     "contracts/energy-token",
     "contracts/marketplace",
     "contracts/network-incentives",
+    "contracts/governance",
 ]
 resolver = "2"
 

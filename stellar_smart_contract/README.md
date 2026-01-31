@@ -20,6 +20,10 @@ The system enables rooftop solar owners (donors) to tokenize excess energy and s
     - Registers Raspberry Pi nodes.
     - Tracks packet routing activity.
     - Distributes rewards based on network contribution.
+4.  **Governance (`governance`)**:
+    - Allows community members to propose grid upgrades.
+    - Handles voting on active proposals.
+    - Finalizes proposal status based on voting results.
 
 ## Program Flow
 
@@ -77,6 +81,7 @@ graph TD
     MP -->|Balance Verification| ET
     RP[Raspberry Pi Node] -->|Report Routing| NI[Network Incentives Contract]
     Admin -->|Distribute Rewards| NI
+    Community[Community Member] -->|Propose/Vote| GOV[Governance Contract]
 ```
 
 ---
