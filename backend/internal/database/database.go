@@ -2,10 +2,11 @@ package database
 
 import (
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"los-tecnicos/backend/internal/config"
 	"los-tecnicos/backend/internal/core/domain"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
@@ -32,6 +33,8 @@ func Connect() (*gorm.DB, error) {
 		&domain.IoTDevice{},
 		&domain.Transaction{},
 		&domain.NetworkNode{},
+		&domain.DeviceQualityMetrics{},
+		&domain.PricingHistory{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)

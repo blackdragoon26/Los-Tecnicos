@@ -15,6 +15,7 @@ import (
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
 	"los-tecnicos/backend/internal/matching"
+	"los-tecnicos/backend/internal/pricing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -558,10 +559,11 @@ func MarketDataWS(c *gin.Context) {
 
 // MarketPriceResponse defines the structure for the market price response.
 type MarketPriceResponse struct {
-	Price     float64 `json:"price"`
-	Supply    int64   `json:"supply"`
-	Demand    int64   `json:"demand"`
-	Timestamp string  `json:"timestamp"`
+	Price     float64            `json:"price"`
+	Supply    int64              `json:"supply"`
+	Demand    int64              `json:"demand"`
+	Timestamp string             `json:"timestamp"`
+	Breakdown map[string]float64 `json:"breakdown"`
 }
 
 // GetMarketPrice calculates the current estimated market price using the matching engine's logic.
@@ -590,13 +592,24 @@ func GetMarketPrice(c *gin.Context) {
 	}
 
 	// Calculate Dynamic Price
-	dynamicPrice := matching.CalculateDynamicPrice(basePrice, demandVol, supplyVol, socAvg, 1.0)
+	// We create dummy orders for calculation
+	dummyBuy := domain.EnergyOrder{}
+	dummySell := domain.EnergyOrder{UserID: "user_a", TokenPrice: basePrice} // Use 'user_a' from simulation for quality variance
+
+	pe := pricing.NewPricingEngine()
+	pe.BasePrice = basePrice
+
+	dynamicPrice, breakdown, _ := pe.CalculateDynamicPrice(dummyBuy, dummySell, supplyVol, demandVol, socAvg, 1.0)
+
+	// Debug log to see fluctuations
+	log.Printf("Price Pre-calc: SoC=%.2f, Quality=%.2f, Final=%.2f", socAvg, breakdown["f_quality"], dynamicPrice)
 
 	c.JSON(http.StatusOK, MarketPriceResponse{
 		Price:     dynamicPrice,
 		Supply:    sellOrdersCount,
 		Demand:    buyOrdersCount,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Breakdown: breakdown,
 	})
 }
 
@@ -615,7 +628,7 @@ func GetMarketHistory(c *gin.Context) {
 		return
 	}
 
-	var history []MarketHistoryPoint
+	history := []MarketHistoryPoint{}
 	// Reverse to chronological order for the chart
 	for i := len(transactions) - 1; i >= 0; i-- {
 		txn := transactions[i]

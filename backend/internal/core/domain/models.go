@@ -59,3 +59,30 @@ type NetworkNode struct {
 	PacketsRouted int64   `json:"packets_routed"`
 	Earnings      float64 `json:"earnings"`
 }
+
+// DeviceQualityMetrics stores historical performance data for a donor's device.
+type DeviceQualityMetrics struct {
+	ID                   uint      `json:"id" gorm:"primaryKey"`
+	DeviceID             string    `json:"device_id" gorm:"unique;not null"`
+	SuccessfulDeliveries int       `json:"successful_deliveries"`
+	TotalDeliveries      int       `json:"total_deliveries"`
+	VoltageStability     float64   `json:"voltage_stability"`    // Standard deviation or score (0-100)
+	BatteryHealthScore   float64   `json:"battery_health_score"` // 0-100
+	LastUpdated          time.Time `json:"last_updated"`
+}
+
+// PricingHistory logs the detailed breakdown of every price calculation.
+type PricingHistory struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	Timestamp    time.Time `json:"timestamp" gorm:"index"`
+	BasePrice    float64   `json:"base_price"`
+	FinalPrice   float64   `json:"final_price"`
+	SupplyDemand float64   `json:"f_sd"`
+	SoC          float64   `json:"f_soc"`
+	Distance     float64   `json:"f_dist"`
+	Time         float64   `json:"f_time"`
+	Quality      float64   `json:"f_quality"`
+	GridSoC      float64   `json:"grid_soc"`
+	TotalDemand  float64   `json:"total_demand"`
+	TotalSupply  float64   `json:"total_supply"`
+}

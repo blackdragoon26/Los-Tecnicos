@@ -14,7 +14,7 @@ export const LiquidChrome = ({
   interactive = true,
   ...props
 }) => {
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -107,7 +107,7 @@ export const LiquidChrome = ({
     window.addEventListener('resize', resize);
     resize();
 
-    function handleMouseMove(event) {
+    function handleMouseMove(event: MouseEvent) {
       const rect = container.getBoundingClientRect();
       const x = (event.clientX - rect.left) / rect.width;
       const y = 1 - (event.clientY - rect.top) / rect.height;
@@ -116,7 +116,7 @@ export const LiquidChrome = ({
       mouseUniform[1] = y;
     }
 
-    function handleTouchMove(event) {
+    function handleTouchMove(event: TouchEvent) {
       if (event.touches.length > 0) {
         const touch = event.touches[0];
         const rect = container.getBoundingClientRect();
@@ -133,8 +133,8 @@ export const LiquidChrome = ({
       container.addEventListener('touchmove', handleTouchMove);
     }
 
-    let animationId;
-    function update(t) {
+    let animationId: number;
+    function update(t: number) {
       animationId = requestAnimationFrame(update);
       program.uniforms.uTime.value = t * 0.001 * speed;
       renderer.render({ scene: mesh });

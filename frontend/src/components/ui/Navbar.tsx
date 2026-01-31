@@ -94,7 +94,7 @@ export default function Navbar() {
 
                 // Fetch full user profile immediately to populate store
                 try {
-                    const profile = await authApi.me();
+                    const { data: profile } = await authApi.me();
                     console.log("Fetched user profile:", profile);
                     setUser(profile);
                 } catch (profileError) {
@@ -112,7 +112,7 @@ export default function Navbar() {
 
                         // Fetch full user profile immediately
                         try {
-                            const profile = await authApi.me();
+                            const { data: profile } = await authApi.me();
                             console.log("Fetched user profile:", profile);
                             setUser(profile);
                         } catch (profileError) {

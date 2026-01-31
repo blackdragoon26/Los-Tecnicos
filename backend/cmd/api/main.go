@@ -10,6 +10,7 @@ import (
 	"los-tecnicos/backend/internal/handlers"
 	"los-tecnicos/backend/internal/matching"
 	"los-tecnicos/backend/internal/mqtt"
+	"los-tecnicos/backend/internal/simulation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +40,10 @@ func main() {
 	// Start the matching engine in the background
 	go matching.RunMatchingEngine(SorobanClient)
 
+	// Seed mock data and start simulation
+	simulation.SeedMockData()
+	simulation.StartSimulation()
+
 	router := gin.Default()
 
 	// Apply middlewares globally
@@ -46,7 +51,7 @@ func main() {
 	router.Use(gin.Logger()) // Using Gin's default logger as well
 	router.Use(gin.Recovery())
 	router.Use(handlers.AuditMiddleware())
-	router.Use(handlers.RateLimiter(100, time.Minute)) // 100 requests per minute
+	router.Use(handlers.RateLimiter(1000, time.Minute)) // Increased limit for dev
 
 	// A simple health check endpoint
 	router.GET("/ping", func(c *gin.Context) {

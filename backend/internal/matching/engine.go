@@ -2,13 +2,13 @@ package matching
 
 import (
 	"log"
-	"math"
 	"time"
 
 	"los-tecnicos/backend/internal/blockchain"
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
 	"los-tecnicos/backend/internal/mqtt"
+	"los-tecnicos/backend/internal/pricing"
 
 	"gorm.io/gorm"
 )
@@ -55,7 +55,12 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 			// Calculate Dynamic Price
 			// For distance, we'd need user locations. For now assuming distance = 1 (neighbor).
 			// Base price is the Seller's asking price.
-			dynamicPrice := CalculateDynamicPrice(sellOrder.TokenPrice, demandVol, supplyVol, socAvg, 1.0)
+			pe := pricing.NewPricingEngine()
+			dynamicPrice, _, err := pe.CalculateDynamicPrice(buyOrder, sellOrder, supplyVol, demandVol, socAvg, 1.0)
+			if err != nil {
+				log.Printf("Error calculating price: %v", err)
+				continue
+			}
 
 			// Price condition: buyer is willing to pay at least the dynamic price (or the seller's price if calc fails)
 			// We effectively use the dynamic price as the settlement price.
@@ -117,44 +122,6 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 			}
 		}
 	}
-}
-
-// CalculateDynamicPrice determines the Real-Time Price (P_rt)
-// Formula: P_rt = P_base * F_sd * F_soc * F_dist
-func CalculateDynamicPrice(basePrice, demand, supply, socAvg, distance float64) float64 {
-	// Constants ( Sensitivity Coefficients )
-	const alpha = 0.1  // Supply/Demand sensitivity
-	const beta = 0.5   // Scarcity sensitivity
-	const gamma = 0.05 // Distance/Loss coefficient
-
-	// 1. Supply/Demand Factor (F_sd)
-	// Avoid division by zero
-	if supply == 0 {
-		supply = 1
-	}
-	ratio := demand / supply
-	// Factor = 1 + alpha * ln(D/S)
-	// If D > S, ln is positive -> Price up. If D < S, ln is negative -> Price down.
-	fSD := 1.0 + alpha*math.Log(ratio)
-
-	// 2. State of Charge Factor (F_soc)
-	// Factor = 1 + beta * (1 - SoC_avg)
-	// Lower SoC -> Higher Price
-	fSoC := 1.0 + beta*(1.0-socAvg)
-
-	// 3. Distance Factor (F_dist)
-	// Factor = 1 + gamma * distance
-	fDist := 1.0 + gamma*distance
-
-	// Total Price
-	pRT := basePrice * fSD * fSoC * fDist
-
-	// Safety: Price cannot be negative or incredibly low
-	if pRT < basePrice*0.5 {
-		pRT = basePrice * 0.5
-	}
-
-	return pRT
 }
 
 // GetCommunitySoC calculates the average battery level of all registered devices

@@ -6,12 +6,14 @@ import {
     ArrowUpRight,
     ArrowDownLeft,
     Search,
-    Wallet
+    Wallet,
+    Calculator
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { marketApi } from '@/lib/api';
 import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import DynamicPriceDisplay from '@/components/marketplace/DynamicPriceDisplay';
 
 export default function Marketplace() {
     const { user, orders, setOrders, isLoading, setLoading } = useStore();
@@ -25,7 +27,7 @@ export default function Marketplace() {
     const [buyPrice, setBuyPrice] = useState('');
 
     // Market Data State
-    const [marketPrice, setMarketPrice] = useState<number | null>(null);
+    const [marketData, setMarketData] = useState<any>(null); // Holds price, breakdown, etc.
     const [marketHistory, setMarketHistory] = useState<any[]>([]);
 
     const isAuthenticated = !!user;
@@ -47,10 +49,11 @@ export default function Marketplace() {
             const fetchMarketData = async () => {
                 try {
                     const priceRes = await marketApi.getMarketPrice();
-                    setMarketPrice(priceRes.data.price);
+                    // priceRes.data contains { price, supply, demand, timestamp, breakdown }
+                    setMarketData(priceRes.data);
 
                     const historyRes = await marketApi.getMarketHistory();
-                    setMarketHistory(historyRes.data);
+                    setMarketHistory(historyRes.data || []);
                 } catch (error) {
                     console.error("Failed to fetch market data:", error);
                 }
@@ -132,70 +135,155 @@ export default function Marketplace() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Trading Section */}
                     <div className="lg:col-span-8 space-y-8">
-                        {/* Chart Section */}
-                        <div className="bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6 h-[400px] flex flex-col justify-between">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <p className="text-sm text-neutral-400">Estimated Market Price (XLM/kWh)</p>
-                                    <div className="flex items-baseline gap-3">
-                                        <p className="text-4xl font-bold">
-                                            {marketPrice ? marketPrice.toFixed(4) : "Loading..."}
-                                        </p>
-                                        <p className="text-green-400 font-semibold flex items-center gap-1">
-                                            <span className="relative flex h-2 w-2">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                            </span>
-                                            Live
-                                        </p>
-                                    </div>
+                        {/* Chart and Price Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6">
+                            {/* Left: Dynamic Price Breakdown */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-xl font-bold">Market Status</h2>
+                                    <Link href="/formula">
+                                        <button className="text-xs bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded-full transition-colors flex items-center gap-1">
+                                            <Calculator size={12} />
+                                            Formula
+                                        </button>
+                                    </Link>
                                 </div>
-                            </div>
-
-                            <div className="h-full w-full min-h-[250px]">
-                                {marketHistory.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={marketHistory}>
-                                            <defs>
-                                                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                            <XAxis
-                                                dataKey="timestamp"
-                                                stroke="#666"
-                                                tick={{ fontSize: 12 }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                            />
-                                            <YAxis
-                                                stroke="#666"
-                                                tick={{ fontSize: 12 }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                domain={['auto', 'auto']}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px' }}
-                                                itemStyle={{ color: '#fff' }}
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="price"
-                                                stroke="#8b5cf6"
-                                                strokeWidth={2}
-                                                fillOpacity={1}
-                                                fill="url(#colorPrice)"
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
+                                {marketData ? (
+                                    <DynamicPriceDisplay breakdown={{
+                                        base_price: marketData.breakdown?.base_price || 0.5,
+                                        final_price: marketData.price,
+                                        f_sd: marketData.breakdown?.f_sd || 1.0,
+                                        f_soc: marketData.breakdown?.f_soc || 1.0,
+                                        f_dist: marketData.breakdown?.f_dist || 1.0,
+                                        f_time: marketData.breakdown?.f_time || 1.0,
+                                        f_quality: marketData.breakdown?.f_quality || 1.0,
+                                    }}
+                                        timestamp={marketData.timestamp}
+                                    />
                                 ) : (
-                                    <div className="h-full w-full flex items-center justify-center bg-neutral-900/50 rounded-lg">
-                                        <p className="text-neutral-500">Waiting for market data...</p>
+                                    <div className="animate-pulse h-64 bg-neutral-700 rounded-xl"></div>
+                                )}
+
+                                {/* Grid Visualization Overlay */}
+                                {marketData && (
+                                    <div className="mt-6 pt-6 border-t border-neutral-700/50">
+                                        <h3 className="text-xs text-neutral-500 uppercase tracking-widest font-bold mb-3">Live Grid Topology</h3>
+                                        <div className="flex items-center justify-between gap-4">
+                                            {/* Supply Side */}
+                                            <div className="flex-1 bg-green-500/5 rounded-xl p-3 border border-green-500/10">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs text-green-400 font-bold">Supply</span>
+                                                    <span className="text-xs font-mono">{marketData.supply} Nodes</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from({ length: Math.min(marketData.supply, 12) }).map((_, i) => (
+                                                        <motion.div
+                                                            key={`s-${i}`}
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            className="w-2 h-2 rounded-full bg-green-500"
+                                                            title="Active Solar Node"
+                                                        />
+                                                    ))}
+                                                    {marketData.supply > 12 && <span className="text-[10px] text-neutral-500">+more</span>}
+                                                </div>
+                                            </div>
+
+                                            {/* Transmission Line */}
+                                            <div className="flex flex-col items-center justify-center gap-1 w-16">
+                                                <div className="w-full h-0.5 bg-neutral-600 relative overflow-hidden">
+                                                    <motion.div
+                                                        animate={{ x: ["-100%", "100%"] }}
+                                                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                                        className="absolute top-0 left-0 w-1/2 h-full bg-primary-DEFAULT"
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] text-neutral-500 font-mono">
+                                                    {((marketData.breakdown?.f_dist - 1.0) / 0.1 || 1.2).toFixed(1)}km
+                                                </span>
+                                            </div>
+
+                                            {/* Demand Side */}
+                                            <div className="flex-1 bg-red-500/5 rounded-xl p-3 border border-red-500/10">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs text-red-400 font-bold">Demand</span>
+                                                    <span className="text-xs font-mono">{marketData.demand} Users</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.from({ length: Math.min(marketData.demand, 12) }).map((_, i) => (
+                                                        <motion.div
+                                                            key={`d-${i}`}
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            className="w-2 h-2 rounded-sm bg-red-500"
+                                                            title="Active Consumer"
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Right: Price Chart */}
+                            <div className="flex flex-col h-[400px]">
+                                <div className="mb-4 flex justify-between items-center">
+                                    <p className="text-sm text-neutral-400">24h Price History</p>
+                                    <p className="text-green-400 font-semibold flex items-center gap-1 text-sm">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                        </span>
+                                        Live
+                                    </p>
+                                </div>
+
+                                <div className="h-full w-full min-h-[250px]">
+                                    {marketHistory.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={marketHistory}>
+                                                <defs>
+                                                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                                <XAxis
+                                                    dataKey="timestamp"
+                                                    stroke="#666"
+                                                    tick={{ fontSize: 12 }}
+                                                    tickLine={false}
+                                                    axisLine={false}
+                                                />
+                                                <YAxis
+                                                    stroke="#666"
+                                                    tick={{ fontSize: 12 }}
+                                                    tickLine={false}
+                                                    axisLine={false}
+                                                    domain={['auto', 'auto']}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px' }}
+                                                    itemStyle={{ color: '#fff' }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="price"
+                                                    stroke="#8b5cf6"
+                                                    strokeWidth={2}
+                                                    fillOpacity={1}
+                                                    fill="url(#colorPrice)"
+                                                />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full w-full flex items-center justify-center bg-neutral-900/50 rounded-lg">
+                                            <p className="text-neutral-500">Waiting for market data...</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

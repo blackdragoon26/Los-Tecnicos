@@ -31,6 +31,19 @@ func SeedMockData() {
 
 	for _, d := range devices {
 		database.DB.FirstOrCreate(&d, domain.IoTDevice{ID: d.ID})
+
+		// Seed Quality Metrics for ESP32 devices
+		if d.DeviceType == "esp32" {
+			metrics := domain.DeviceQualityMetrics{
+				DeviceID:             d.ID,
+				SuccessfulDeliveries: 45 + rand.Intn(10), // Random success count
+				TotalDeliveries:      50 + rand.Intn(10),
+				VoltageStability:     98.0 + (rand.Float64() * 2.0),  // 98-100%
+				BatteryHealthScore:   90.0 + (rand.Float64() * 10.0), // 90-100%
+				LastUpdated:          time.Now(),
+			}
+			database.DB.FirstOrCreate(&metrics, domain.DeviceQualityMetrics{DeviceID: d.ID})
+		}
 	}
 }
 
@@ -55,7 +68,8 @@ func fluctuateBatteries() {
 	for _, d := range devices {
 		// Simulate charging (daytime) or discharging (nighttime/usage)
 		// For demo purposes, we just add/subtract a random small amount
-		change := (rand.Float64() * 0.1) - 0.04 // Bias towards charging slightly
+		// Increased volatility for demo: +/- 15% change
+		change := (rand.Float64() * 0.3) - 0.15
 		newLevel := d.BatteryLevel + change
 
 		if newLevel > 1.0 {
@@ -66,6 +80,22 @@ func fluctuateBatteries() {
 		}
 
 		database.DB.Model(&d).Update("battery_level", newLevel)
+
+		// Also update Quality Metrics occasionally
+		if rand.Float64() < 0.3 {
+			var m domain.DeviceQualityMetrics
+			if err := database.DB.Where("device_id = ?", d.ID).First(&m).Error; err == nil {
+				// Fluctuate voltage more aggressively for demo
+				newVoltage := m.VoltageStability + (rand.Float64()*10.0 - 5.0)
+				if newVoltage > 100 {
+					newVoltage = 100
+				}
+				if newVoltage < 80 {
+					newVoltage = 80
+				}
+				database.DB.Model(&m).Update("voltage_stability", newVoltage)
+			}
+		}
 	}
-	log.Println("[Simulation] Battery levels updated across community.")
+	log.Println("[Simulation] Battery levels and Quality Metrics updated across community.")
 }
