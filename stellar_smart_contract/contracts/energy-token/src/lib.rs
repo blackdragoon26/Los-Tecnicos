@@ -43,7 +43,7 @@ mod test {
         let admin = Address::generate(&env);
         let user = Address::generate(&env);
 
-        let contract_id = env.register_contract(None, EnergyToken);
+        let contract_id = env.register(EnergyToken, ());
         let client = EnergyTokenClient::new(&env, &contract_id);
 
         client.initialize(&admin);

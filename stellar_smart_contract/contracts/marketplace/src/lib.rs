@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, vec, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -63,7 +63,7 @@ mod test {
         let user = Address::generate(&env);
         let token_addr = Address::generate(&env);
 
-        let contract_id = env.register_contract(None, Marketplace);
+        let contract_id = env.register(Marketplace, ());
         let client = MarketplaceClient::new(&env, &contract_id);
 
         client.initialize(&admin, &token_addr);
