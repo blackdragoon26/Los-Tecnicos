@@ -14,6 +14,7 @@ import (
 	"los-tecnicos/backend/internal/config"
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
+	"los-tecnicos/backend/internal/matching"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -553,4 +554,80 @@ func MarketDataWS(c *gin.Context) {
 			break
 		}
 	}
+}
+
+// MarketPriceResponse defines the structure for the market price response.
+type MarketPriceResponse struct {
+	Price     float64 `json:"price"`
+	Supply    int64   `json:"supply"`
+	Demand    int64   `json:"demand"`
+	Timestamp string  `json:"timestamp"`
+}
+
+// GetMarketPrice calculates the current estimated market price using the matching engine's logic.
+func GetMarketPrice(c *gin.Context) {
+	var sellOrdersCount int64
+	var buyOrdersCount int64
+
+	// Get Supply and Demand
+	database.DB.Model(&domain.EnergyOrder{}).Where("type = ? AND status = ?", "sell", "Created").Count(&sellOrdersCount)
+	database.DB.Model(&domain.EnergyOrder{}).Where("type = ? AND status = ?", "buy", "Created").Count(&buyOrdersCount)
+
+	supplyVol := float64(sellOrdersCount)
+	demandVol := float64(buyOrdersCount)
+	socAvg := matching.GetCommunitySoC()
+
+	// Determine Base Price
+	// Ideally, fetch the lowest sell order price
+	var lowestSellOrder domain.EnergyOrder
+	var basePrice float64
+
+	if err := database.DB.Where("type = ? AND status = ?", "sell", "Created").Order("token_price asc").First(&lowestSellOrder).Error; err == nil {
+		basePrice = lowestSellOrder.TokenPrice
+	} else {
+		// Fallback if no sell orders exist
+		basePrice = 0.50 // Default base price
+	}
+
+	// Calculate Dynamic Price
+	dynamicPrice := matching.CalculateDynamicPrice(basePrice, demandVol, supplyVol, socAvg, 1.0)
+
+	c.JSON(http.StatusOK, MarketPriceResponse{
+		Price:     dynamicPrice,
+		Supply:    sellOrdersCount,
+		Demand:    buyOrdersCount,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// MarketHistoryPoint represents a single data point for the market chart.
+type MarketHistoryPoint struct {
+	Price     float64 `json:"price"`
+	Timestamp string  `json:"timestamp"`
+}
+
+// GetMarketHistory retrieves recent trade prices for the chart.
+func GetMarketHistory(c *gin.Context) {
+	var transactions []domain.Transaction
+	// Fetch last 50 completed transactions
+	if err := database.DB.Where("status = ?", "Completed").Order("timestamp desc").Limit(50).Find(&transactions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve market history"})
+		return
+	}
+
+	var history []MarketHistoryPoint
+	// Reverse to chronological order for the chart
+	for i := len(transactions) - 1; i >= 0; i-- {
+		txn := transactions[i]
+		pricePerKwh := 0.0
+		if txn.KwhAmount > 0 {
+			pricePerKwh = txn.TokenAmount / txn.KwhAmount
+		}
+		history = append(history, MarketHistoryPoint{
+			Price:     pricePerKwh,
+			Timestamp: txn.Timestamp.Format("15:04"), // HH:MM format
+		})
+	}
+
+	c.JSON(http.StatusOK, history)
 }

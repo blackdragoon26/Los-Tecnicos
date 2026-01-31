@@ -18,9 +18,11 @@ function cn(...inputs: ClassValue[]) {
 
 const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Marketplace', path: '/marketplace', icon: ShoppingCart },
+    { name: 'Products', path: '/products', icon: ShoppingCart },
+    { name: 'Onboarding', path: '/onboarding', icon: User },
+    { name: 'Marketplace', path: '/marketplace', icon: BarChart3 },
     { name: 'Network', path: '/network', icon: Globe },
-    { name: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { name: 'Analytics', path: '/analytics', icon: LayoutDashboard },
     { name: 'About', path: '/about', icon: Info },
 ];
 

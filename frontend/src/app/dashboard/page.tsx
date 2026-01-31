@@ -174,7 +174,7 @@ function DonorView({ stats }: any) {
     );
 }
 
-const EmptyState = ({ icon: Icon, title, subtitle }) => (
+const EmptyState = ({ icon: Icon, title, subtitle }: { icon: any, title: string, subtitle: string }) => (
     <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

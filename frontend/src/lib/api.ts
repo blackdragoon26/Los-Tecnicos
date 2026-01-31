@@ -58,6 +58,8 @@ export const marketApi = {
     createOrder: (order: { type: string; kwh_amount: number; token_price: number }) =>
         api.post('/market/order/create', order),
     cancelOrder: (order_id: string) => api.post('/market/order/cancel', { order_id }),
+    getMarketPrice: () => api.get('/market/price'),
+    getMarketHistory: () => api.get('/market/history'),
 };
 
 export const iotApi = {

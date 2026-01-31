@@ -40,7 +40,7 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 	// Calculate Market Variables for Dynamic Pricing
 	supplyVol := float64(len(openSellOrders))
 	demandVol := float64(len(openBuyOrders))
-	socAvg := getCommunitySoC()
+	socAvg := GetCommunitySoC()
 
 	log.Printf("Market State: Supply=%f, Demand=%f, SoC_avg=%f", supplyVol, demandVol, socAvg)
 
@@ -55,7 +55,7 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 			// Calculate Dynamic Price
 			// For distance, we'd need user locations. For now assuming distance = 1 (neighbor).
 			// Base price is the Seller's asking price.
-			dynamicPrice := calculateDynamicPrice(sellOrder.TokenPrice, demandVol, supplyVol, socAvg, 1.0)
+			dynamicPrice := CalculateDynamicPrice(sellOrder.TokenPrice, demandVol, supplyVol, socAvg, 1.0)
 
 			// Price condition: buyer is willing to pay at least the dynamic price (or the seller's price if calc fails)
 			// We effectively use the dynamic price as the settlement price.
@@ -119,9 +119,9 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 	}
 }
 
-// calculateDynamicPrice determines the Real-Time Price (P_rt)
+// CalculateDynamicPrice determines the Real-Time Price (P_rt)
 // Formula: P_rt = P_base * F_sd * F_soc * F_dist
-func calculateDynamicPrice(basePrice, demand, supply, socAvg, distance float64) float64 {
+func CalculateDynamicPrice(basePrice, demand, supply, socAvg, distance float64) float64 {
 	// Constants ( Sensitivity Coefficients )
 	const alpha = 0.1  // Supply/Demand sensitivity
 	const beta = 0.5   // Scarcity sensitivity
@@ -157,8 +157,8 @@ func calculateDynamicPrice(basePrice, demand, supply, socAvg, distance float64) 
 	return pRT
 }
 
-// getCommunitySoC calculates the average battery level of all registered devices
-func getCommunitySoC() float64 {
+// GetCommunitySoC calculates the average battery level of all registered devices
+func GetCommunitySoC() float64 {
 	var devices []domain.IoTDevice
 	if err := database.DB.Find(&devices).Error; err != nil {
 		log.Printf("Error fetching devices for SoC: %v", err)

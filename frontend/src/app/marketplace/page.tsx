@@ -11,6 +11,7 @@ import {
 import { useStore } from '@/store/useStore';
 import { marketApi } from '@/lib/api';
 import Link from 'next/link';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Marketplace() {
     const { user, orders, setOrders, isLoading, setLoading } = useStore();
@@ -22,6 +23,10 @@ export default function Marketplace() {
     // Separate state for Buy Order
     const [buyAmount, setBuyAmount] = useState('');
     const [buyPrice, setBuyPrice] = useState('');
+
+    // Market Data State
+    const [marketPrice, setMarketPrice] = useState<number | null>(null);
+    const [marketHistory, setMarketHistory] = useState<any[]>([]);
 
     const isAuthenticated = !!user;
 
@@ -38,7 +43,25 @@ export default function Marketplace() {
                     setLoading(false);
                 }
             };
+
+            const fetchMarketData = async () => {
+                try {
+                    const priceRes = await marketApi.getMarketPrice();
+                    setMarketPrice(priceRes.data.price);
+
+                    const historyRes = await marketApi.getMarketHistory();
+                    setMarketHistory(historyRes.data);
+                } catch (error) {
+                    console.error("Failed to fetch market data:", error);
+                }
+            };
+
             fetchOrders();
+            fetchMarketData();
+
+            // Poll for market data every 10 seconds
+            const interval = setInterval(fetchMarketData, 10000);
+            return () => clearInterval(interval);
         }
     }, [isAuthenticated, setOrders, setLoading]);
 
@@ -109,25 +132,70 @@ export default function Marketplace() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Trading Section */}
                     <div className="lg:col-span-8 space-y-8">
-                        {/* Chart Placeholder */}
+                        {/* Chart Section */}
                         <div className="bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6 h-[400px] flex flex-col justify-between">
-                            <div>
-                                <p className="text-sm text-neutral-400">Estimated Market Price (XLM/kWh)</p>
-                                <div className="flex items-baseline gap-3">
-                                    <p className="text-4xl font-bold">
-                                        {(() => {
-                                            const lowestSell = sellOrders.length > 0 ? sellOrders[0].token_price : 0;
-                                            const highestBuy = buyOrders.length > 0 ? buyOrders[0].token_price : 0;
-                                            if (lowestSell && highestBuy) return ((lowestSell + highestBuy) / 2).toFixed(4);
-                                            if (lowestSell) return lowestSell.toFixed(4);
-                                            return "0.8200"; // Fallback
-                                        })()}
-                                    </p>
-                                    <p className="text-green-400 font-semibold">Dynamic</p>
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <p className="text-sm text-neutral-400">Estimated Market Price (XLM/kWh)</p>
+                                    <div className="flex items-baseline gap-3">
+                                        <p className="text-4xl font-bold">
+                                            {marketPrice ? marketPrice.toFixed(4) : "Loading..."}
+                                        </p>
+                                        <p className="text-green-400 font-semibold flex items-center gap-1">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                            </span>
+                                            Live
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="h-48 w-full bg-neutral-700/50 rounded-lg flex items-center justify-center">
-                                <p className="text-neutral-500">Chart coming soon...</p>
+
+                            <div className="h-full w-full min-h-[250px]">
+                                {marketHistory.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={marketHistory}>
+                                            <defs>
+                                                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                            <XAxis
+                                                dataKey="timestamp"
+                                                stroke="#666"
+                                                tick={{ fontSize: 12 }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <YAxis
+                                                stroke="#666"
+                                                tick={{ fontSize: 12 }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                domain={['auto', 'auto']}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#171717', border: '1px solid #333', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="price"
+                                                stroke="#8b5cf6"
+                                                strokeWidth={2}
+                                                fillOpacity={1}
+                                                fill="url(#colorPrice)"
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full w-full flex items-center justify-center bg-neutral-900/50 rounded-lg">
+                                        <p className="text-neutral-500">Waiting for market data...</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -167,7 +235,7 @@ export default function Marketplace() {
     );
 }
 
-const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder }) => {
+const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder }: any) => {
     const isSell = type === 'sell';
     return (
         <div className="bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6">
@@ -176,8 +244,8 @@ const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder
                 {isSell ? 'Sell Energy' : 'Buy Energy'}
             </h3>
             <div className="space-y-4">
-                <FormInput id={`amount-${type}`} label="Amount (kWh)" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
-                <FormInput id={`price-${type}`} label={isSell ? "Price per kWh (XLM)" : "Max Price (XLM)"} value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00" />
+                <FormInput id={`amount-${type}`} label="Amount (kWh)" value={amount} onChange={(e: any) => setAmount(e.target.value)} placeholder="0.00" />
+                <FormInput id={`price-${type}`} label={isSell ? "Price per kWh (XLM)" : "Max Price (XLM)"} value={price} onChange={(e: any) => setPrice(e.target.value)} placeholder="0.00" />
                 <button
                     onClick={() => handleCreateOrder(type)}
                     className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-colors ${isSell ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
@@ -189,7 +257,7 @@ const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder
     );
 };
 
-const FormInput = ({ id, label, ...props }) => (
+const FormInput = ({ id, label, ...props }: any) => (
     <div>
         <label htmlFor={id} className="text-sm text-neutral-400 block mb-2">{label}</label>
         <input
@@ -201,7 +269,7 @@ const FormInput = ({ id, label, ...props }) => (
     </div>
 );
 
-const OrderBook = ({ title, orders, color }) => (
+const OrderBook = ({ title, orders, color }: any) => (
     <div>
         <h3 className="text-md font-semibold text-neutral-300 mb-3">{title}</h3>
         <div className="grid grid-cols-3 text-xs text-neutral-500 mb-2 px-2">
@@ -210,7 +278,7 @@ const OrderBook = ({ title, orders, color }) => (
             <span className="text-right">Total (XLM)</span>
         </div>
         <div className="space-y-1">
-            {orders.map(order => (
+            {orders.map((order: any) => (
                 <div key={order.id} className="grid grid-cols-3 text-sm py-1 px-2 hover:bg-neutral-700/50 transition-colors rounded">
                     <span className={`${color} font-mono`}>{order.token_price.toFixed(4)}</span>
                     <span className="text-center text-neutral-300 font-mono">{order.kwh_amount.toFixed(2)}</span>
@@ -220,4 +288,3 @@ const OrderBook = ({ title, orders, color }) => (
         </div>
     </div>
 );
-

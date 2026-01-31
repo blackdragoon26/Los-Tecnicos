@@ -32,6 +32,8 @@ func SetupRoutes(router *gin.Engine) {
 				market.GET("/orders", GetMarketOrders)
 				market.POST("/order/create", CreateOrder)
 				market.POST("/order/cancel", CancelOrder)
+				market.GET("/price", GetMarketPrice)
+				market.GET("/history", GetMarketHistory)
 			}
 
 			// IoT routes
