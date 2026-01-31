@@ -4,17 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Zap,
-    Battery,
+    BatteryCharging,
     ArrowUpRight,
     ArrowDownLeft,
     Cpu,
     Activity,
     History,
     TrendingUp,
-    CreditCard,
-    Plus,
-    Globe,
-    ShoppingCart
+    Users,
+    ShoppingCart,
+    Globe
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { analyticsApi, iotApi } from '@/lib/api';
@@ -29,7 +28,7 @@ const ROLES = ['Donor', 'Recipient', 'Operator'];
 
 export default function Dashboard() {
     const [activeRole, setActiveRole] = useState('Donor');
-    const { user, setUser, setDevices } = useStore();
+    const { user, setDevices } = useStore();
     const [stats, setStats] = useState<any>(null);
 
     useEffect(() => {
@@ -49,57 +48,60 @@ export default function Dashboard() {
     }, [setDevices]);
 
     return (
-        <div className="max-w-7xl mx-auto px-6 pb-20">
-            {/* Header & Role Switcher */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                <div className="flex flex-col">
-                    <h1 className="text-4xl font-black tracking-tighter uppercase">{activeRole} DASHBOARD</h1>
-                    <p className="text-xs text-white/40 tracking-widest mt-1">
-                        {user?.wallet_address ? `WALLED CONNECTED: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'GUEST MODE'}
-                    </p>
-                </div>
+        <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div>
+                        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-100 uppercase">{activeRole} Dashboard</h1>
+                        <p className="mt-2 text-sm text-neutral-400">
+                            {user?.wallet_address ? `Wallet: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'Guest Mode'}
+                        </p>
+                    </div>
 
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-                    {ROLES.map((role) => (
-                        <button
-                            key={role}
-                            onClick={() => setActiveRole(role)}
-                            className={cn(
-                                "px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300",
-                                activeRole === role ? "bg-cyber-green text-cyber-dark shadow-neon" : "text-white/40 hover:text-white"
-                            )}
-                        >
-                            {role.toUpperCase()}
-                        </button>
-                    ))}
-                </div>
+                    <div className="flex bg-neutral-800 p-1.5 rounded-full border border-neutral-700/50">
+                        {ROLES.map((role) => (
+                            <button
+                                key={role}
+                                onClick={() => setActiveRole(role)}
+                                className={cn(
+                                    "px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-colors duration-300 relative",
+                                    activeRole !== role && "hover:text-neutral-100 text-neutral-400"
+                                )}
+                            >
+                                {activeRole === role && (
+                                    <motion.div
+                                        layoutId="active-role-indicator"
+                                        className="absolute inset-0 bg-primary-DEFAULT rounded-full"
+                                    />
+                                )}
+                                <span className="relative z-10">{role}</span>
+                            </button>
+                        ))}
+                    </div>
+                </header>
+
+                <AnimatePresence mode="wait">
+                    {activeRole === 'Donor' && <DonorView key="donor" stats={stats} />}
+                    {activeRole === 'Recipient' && <RecipientView key="recipient" stats={stats} />}
+                    {activeRole === 'Operator' && <OperatorView key="operator" stats={stats} />}
+                </AnimatePresence>
             </div>
-
-            {/* Main Content Area */}
-            <AnimatePresence mode="wait">
-                {activeRole === 'Donor' && <DonorView key="donor" stats={stats} />}
-                {activeRole === 'Recipient' && <RecipientView key="recipient" stats={stats} />}
-                {activeRole === 'Operator' && <OperatorView key="operator" stats={stats} />}
-            </AnimatePresence>
         </div>
     );
 }
 
-function MetricCard({ label, value, subtext, icon: Icon, colorClass }: any) {
+function MetricCard({ label, value, icon: Icon, colorClass }: any) {
     return (
-        <div className="glass-card relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-4">
-                <div className={cn("p-2 rounded-lg bg-white/5", colorClass)}>
-                    <Icon size={20} />
+        <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
+            <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${colorClass}`}>
+                    <Icon size={24} />
                 </div>
-                <TrendingUp className="text-cyber-green opacity-0 group-hover:opacity-100 transition-opacity" size={16} />
+                <div>
+                    <p className="text-sm text-neutral-400">{label}</p>
+                    <p className="text-2xl font-bold">{value}</p>
+                </div>
             </div>
-            <div className="text-2xl font-black mb-1">{value}</div>
-            <div className="text-xs uppercase tracking-widest text-white/40 mb-1">{label}</div>
-            <div className="text-[10px] text-cyber-green/60 font-medium">{subtext}</div>
-
-            {/* Glow Effect */}
-            <div className={cn("absolute -bottom-4 -right-4 w-12 h-12 blur-2xl opacity-20", colorClass)} />
         </div>
     );
 }
@@ -107,102 +109,98 @@ function MetricCard({ label, value, subtext, icon: Icon, colorClass }: any) {
 function DonorView({ stats }: any) {
     return (
         <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
         >
-            {/* Metrics Row */}
-            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 h-fit">
-                <MetricCard icon={Battery} label="Grid Capacity" value={stats?.total_energy_traded ? `${stats.total_energy_traded} kWh` : '0.0 kWh'} subtext="Cumulative trading volume" colorClass="text-cyber-green" />
-                <MetricCard icon={TrendingUp} label="Network Users" value={stats?.total_users || '0'} subtext="Active grid participants" colorClass="text-cyber-stellar" />
-                <MetricCard icon={Activity} label="Active Orders" value={stats?.active_orders || '0'} subtext="Live market liquidity" colorClass="text-cyber-green" />
+            <div className="lg:col-span-8 space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <MetricCard icon={BatteryCharging} label="Grid Capacity" value={stats?.total_energy_traded ? `${stats.total_energy_traded} kWh` : '0.0 kWh'} colorClass="bg-green-500/10 text-green-400" />
+                    <MetricCard icon={Users} label="Network Users" value={stats?.total_users || '0'} colorClass="bg-blue-500/10 text-blue-400" />
+                    <MetricCard icon={Activity} label="Active Orders" value={stats?.active_orders || '0'} colorClass="bg-orange-500/10 text-orange-400" />
+                </div>
 
-                {/* Large Control Card */}
-                <div className="sm:col-span-3 glass-card flex flex-col md:flex-row items-center gap-8 py-10">
-                    <div className="relative w-32 h-32 flex items-center justify-center">
-                        {/* Circular visualization */}
-                        <div className="absolute inset-0 border-4 border-white/5 rounded-full" />
-                        <div className="absolute inset-0 border-4 border-t-cyber-green border-r-cyber-green border-b-white/5 border-l-white/5 rounded-full animate-spin-slow" />
-                        <Zap size={40} className="text-cyber-green animate-pulse" />
-                    </div>
-                    <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-2xl font-bold mb-2">Sell Excess Energy</h3>
-                        <p className="text-white/50 text-sm mb-6 max-w-md">Distribute your stored battery power to the grid and earn XLM rewards instantly.</p>
-                        <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                            <button className="cyber-button py-2">MINT TOKENS</button>
-                            <button className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/5 font-bold">CREATE ORDER</button>
+                <div className="bg-neutral-800 p-8 rounded-2xl border border-neutral-700/50 flex flex-col md:flex-row items-center gap-8">
+                    <div className="text-center md:text-left flex-1">
+                        <h2 className="text-2xl font-bold mb-2">Sell Excess Energy</h2>
+                        <p className="text-neutral-400 mb-6">Distribute your stored battery power to the grid and earn XLM rewards instantly.</p>
+                        <div className="flex gap-4 justify-center md:justify-start">
+                             <button className="bg-primary-DEFAULT text-primary-foreground hover:bg-primary-DEFAULT/90 font-bold px-6 py-3 rounded-full transition-colors">Mint Tokens</button>
+                            <button className="bg-neutral-700 hover:bg-neutral-600 font-bold px-6 py-3 rounded-full transition-colors">Create Order</button>
                         </div>
+                    </div>
+                     <div className="relative w-32 h-32 flex items-center justify-center">
+                        <Zap size={48} className="text-primary-DEFAULT" />
+                        <motion.div
+                            className="absolute inset-0 border-4 border-primary-DEFAULT/20 rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                        />
+                        <motion.div
+                            className="absolute inset-4 border-t-4 border-primary-DEFAULT rounded-full"
+                            animate={{ rotate: -360 }}
+                            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                        />
                     </div>
                 </div>
             </div>
 
-            {/* Side Column */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
-                <div className="glass-card flex-1">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-bold tracking-widest text-xs uppercase text-white/40">Recent Transactions</h3>
-                        <History size={16} className="text-white/20" />
-                    </div>
-                    <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-white/5 last:border-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-cyber-green/10 flex items-center justify-center text-cyber-green">
-                                        <ArrowUpRight size={16} />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold">Sold 12.5 kWh</div>
-                                        <div className="text-[10px] text-white/40 uppercase">To: GDC...8K2</div>
-                                    </div>
+            <div className="lg:col-span-4 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
+                <h3 className="font-bold mb-6 flex items-center gap-2"><History size={18} /> Recent Transactions</h3>
+                <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                                    <ArrowUpRight size={20} />
                                 </div>
-                                <div className="text-right">
-                                    <div className="font-bold text-cyber-green">+8.4 XLM</div>
-                                    <div className="text-[10px] text-white/40">2 HOURS AGO</div>
+                                <div>
+                                    <p className="font-bold">Sold 12.5 kWh</p>
+                                    <p className="text-xs text-neutral-400">To: GDC...8K2</p>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                            <div className="text-right">
+                                <p className="font-bold text-green-400">+8.4 XLM</p>
+                                <p className="text-xs text-neutral-500">2h ago</p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </motion.div>
     );
 }
 
+const EmptyState = ({ icon: Icon, title, subtitle }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        className="col-span-12 bg-neutral-800 border-2 border-dashed border-neutral-700 rounded-2xl h-80 flex flex-col items-center justify-center text-center"
+    >
+        <Icon size={48} className="text-neutral-600 mb-4" />
+        <h2 className="text-xl font-bold text-neutral-300">{title}</h2>
+        <p className="text-neutral-500 mt-1">{subtitle}</p>
+    </motion.div>
+);
+
 function RecipientView({ stats }: any) {
     return (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-        >
-            <div className="lg:col-span-12 glass-card h-64 flex items-center justify-center border-dashed text-white/20 border-white/10">
-                <div className="text-center">
-                    <ShoppingCart size={48} className="mx-auto mb-4 opacity-10" />
-                    <p className="uppercase tracking-[0.3em] font-black">Recipient Module Active</p>
-                    <p className="text-xs mt-2">{stats?.total_iot_devices || '0'} Devices Monitored</p>
-                </div>
-            </div>
-        </motion.div>
+        <EmptyState 
+            icon={ShoppingCart}
+            title="Recipient Module Active"
+            subtitle={`${stats?.total_iot_devices || '0'} Devices Monitored`}
+        />
     );
 }
 
 function OperatorView({ stats }: any) {
     return (
-        <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-        >
-            <div className="lg:col-span-12 glass-card h-64 flex items-center justify-center border-dashed text-white/20 border-white/10">
-                <div className="text-center">
-                    <Globe size={48} className="mx-auto mb-4 opacity-10" />
-                    <p className="uppercase tracking-[0.3em] font-black">Node Operator Interface</p>
-                    <p className="text-xs mt-2">{stats?.total_network_nodes || '0'} Nodes In Network</p>
-                </div>
-            </div>
-        </motion.div>
+        <EmptyState
+            icon={Globe}
+            title="Node Operator Interface"
+            subtitle={`${stats?.total_network_nodes || '0'} Nodes In Network`}
+        />
     );
 }

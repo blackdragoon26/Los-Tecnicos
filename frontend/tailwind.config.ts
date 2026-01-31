@@ -11,12 +11,24 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        cyber: {
-          blue: "#0a0e27",
-          green: "#00ff88",
-          stellar: "#00d4ff",
-          neon: "#ff00ff",
-          dark: "#050714",
+        primary: {
+          DEFAULT: "#3B82F6", // blue-500
+          foreground: "#FFFFFF",
+        },
+        secondary: {
+          DEFAULT: "#F97316", // orange-500
+          foreground: "#FFFFFF",
+        },
+        neutral: {
+          100: "#F3F4F6", // gray-100
+          200: "#E5E7EB", // gray-200
+          300: "#D1D5DB", // gray-300
+          400: "#9CA3AF", // gray-400
+          500: "#6B7280", // gray-500
+          600: "#4B5563", // gray-600
+          700: "#374151", // gray-700
+          800: "#1F2937", // gray-800
+          900: "#111827", // gray-900
         },
       },
       backgroundImage: {
@@ -24,20 +36,6 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
-      boxShadow: {
-        'neon': '0 0 10px #00ff88, 0 0 20px #00ff88',
-        'neon-blue': '0 0 10px #00d4ff, 0 0 20px #00d4ff',
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 6s ease-in-out infinite',
-      },
-      keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-20px)' },
-        }
-      }
     },
   },
   plugins: [],

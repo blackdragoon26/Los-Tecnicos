@@ -1,124 +1,132 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, MeshDistortMaterial, Float } from '@react-three/drei';
-import * as THREE from 'three';
-import { Globe, MapPin, Activity, Zap } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Globe, MapPin, Activity, Zap, Cpu } from 'lucide-react';
 
-function GlobeModel() {
-    const mesh = useRef<THREE.Mesh>(null!);
+const networkStats = [
+  { label: 'Active Nodes', value: '2,401', icon: Cpu },
+  { label: 'Data Relayed', value: '1.2 PB', icon: Activity },
+  { label: 'Mesh Health', value: '98.4%', icon: Zap },
+];
 
-    useFrame((state) => {
-        if (mesh.current) {
-            mesh.current.rotation.y += 0.002;
-        }
-    });
-
-    return (
-        <group>
-            {/* Main Globe */}
-            <Sphere ref={mesh} args={[3, 64, 64]}>
-                <MeshDistortMaterial
-                    color="#002244"
-                    attach="material"
-                    distort={0.1}
-                    speed={2}
-                    roughness={0.4}
-                    metalness={0.1}
-                    wireframe
-                />
-            </Sphere>
-
-            {/* Core Glowing Core */}
-            <Sphere args={[2.5, 32, 32]}>
-                <meshBasicMaterial color="#00ff88" transparent opacity={0.05} />
-            </Sphere>
-
-            {/* Grid Points (Simulation) */}
-            {Array.from({ length: 15 }).map((_, i) => {
-                const phi = Math.random() * Math.PI * 2;
-                const theta = Math.random() * Math.PI;
-                const r = 3.1;
-                const x = r * Math.sin(theta) * Math.cos(phi);
-                const y = r * Math.sin(theta) * Math.sin(phi);
-                const z = r * Math.cos(theta);
-
-                return (
-                    <mesh key={i} position={[x, y, z]}>
-                        <sphereGeometry args={[0.05, 16, 16]} />
-                        <meshBasicMaterial color="#00ff88" />
-                        <pointLight distance={1} intensity={2} color="#00ff88" />
-                    </mesh>
-                );
-            })}
-        </group>
-    );
-}
+const topNodes = [
+  { name: 'BERLIN-MESH-04', location: 'Berlin, Germany', relayed: '14.2 GB', uptime: '99.9%' },
+  { name: 'SF-GRID-01', location: 'San Francisco, USA', relayed: '12.8 GB', uptime: '99.8%' },
+  { name: 'TOKYO-NODE-07', location: 'Tokyo, Japan', relayed: '11.5 GB', uptime: '99.7%' },
+];
 
 export default function NetworkMap() {
     return (
-        <div className="max-w-7xl mx-auto px-6 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* 3D Visualization */}
-            <div className="lg:col-span-12 h-[600px] glass-card relative overflow-hidden p-0 bg-transparent border-none">
-                <div className="absolute top-8 left-8 z-10">
-                    <h1 className="text-4xl font-black tracking-tighter mb-2">GRID NODES</h1>
-                    <p className="text-white/40 text-sm uppercase tracking-widest">Global Community Mesh Explorer</p>
+        <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <header className="mb-12">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-100">Network Status</h1>
+                    <p className="mt-2 text-lg text-neutral-400">An overview of our global community mesh.</p>
+                </header>
+
+                {/* Stats Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                    {networkStats.map((stat, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-lg bg-primary-DEFAULT/10 text-primary-DEFAULT">
+                                    <stat.icon size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-neutral-400">{stat.label}</p>
+                                    <p className="text-2xl font-bold">{stat.value}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
 
-                <div className="absolute bottom-8 left-8 flex gap-6 z-10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
-                        <span className="text-[10px] text-white/60 font-medium">2,401 ACTIVE</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-cyber-stellar" />
-                        <span className="text-[10px] text-white/60 font-medium">15 OFFLINE</span>
-                    </div>
-                </div>
+                {/* Map and Top Nodes */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Map */}
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="lg:col-span-8 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50 h-96 lg:h-auto flex items-center justify-center"
+                    >
+                         <WorldMap />
+                    </motion.div>
 
-                <Canvas camera={{ position: [0, 0, 10] }}>
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} intensity={1} color="#00ff88" />
-                    <Float speed={1.5} rotationIntensity={0.5} floatIntensity={0.5}>
-                        <GlobeModel />
-                    </Float>
-                </Canvas>
-
-                {/* Overlay Info Card */}
-                <div className="absolute top-8 right-8 z-10 w-64 space-y-4">
-                    <div className="glass-card p-4 border-cyber-green/30">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-cyber-green/10 text-cyber-green">
-                                <Activity size={16} />
-                            </div>
-                            <span className="text-xs font-bold uppercase tracking-wider">Top Node</span>
+                    {/* Top Nodes List */}
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="lg:col-span-4 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50"
+                    >
+                        <h2 className="text-xl font-bold mb-6">Top Performing Nodes</h2>
+                        <div className="space-y-4">
+                            {topNodes.map((node) => (
+                                <div key={node.name} className="bg-neutral-700/50 p-4 rounded-lg">
+                                    <p className="font-bold text-primary-DEFAULT">{node.name}</p>
+                                    <p className="text-xs text-neutral-400 flex items-center gap-1.5 mt-1"><MapPin size={12}/> {node.location}</p>
+                                    <div className="flex justify-between text-sm mt-3 text-neutral-300">
+                                        <span>Relayed: <span className="font-semibold">{node.relayed}</span></span>
+                                        <span>Uptime: <span className="font-semibold">{node.uptime}</span></span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <div className="text-sm font-bold mb-1">BERLIN-MESH-04</div>
-                        <div className="text-[10px] text-white/40 mb-3">LAST SEEN: 2s AGO</div>
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-white/40">Relayed</span>
-                            <span className="text-cyber-green font-bold">14.2 GB</span>
-                        </div>
-                    </div>
-
-                    <div className="glass-card p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="p-2 rounded-lg bg-cyber-stellar/10 text-cyber-stellar">
-                                <Zap size={16} />
-                            </div>
-                            <span className="text-xs font-bold uppercase tracking-wider">Mesh Health</span>
-                        </div>
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyber-stellar w-[98%]" />
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] mt-2">
-                            <span className="text-white/40">SYSTEM STABILITY</span>
-                            <span className="text-cyber-stellar font-bold">98.4%</span>
-                        </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </div>
     );
 }
+
+const WorldMap = () => (
+    <div className="w-full h-full relative">
+        <svg viewBox="0 0 800 400" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            <path 
+                d="M400,0 C179.086,0 0,100.422 0,200 C0,299.578 179.086,400 400,400 C620.914,400 800,299.578 800,200 C800,100.422 620.914,0 400,0 Z" 
+                fill="#1F2937"
+            />
+            {/* Some random points to simulate nodes */}
+            <MapPoint cx="400" cy="200" />
+            <MapPoint cx="150" cy="150" />
+            <MapPoint cx="650" cy="250" />
+            <MapPoint cx="300" cy="280" />
+            <MapPoint cx="500" cy="120" />
+            <MapPoint cx="250" cy="100" />
+            <MapPoint cx="580" cy="300" />
+        </svg>
+    </div>
+);
+
+const MapPoint = ({ cx, cy }) => (
+    <g transform={`translate(${cx}, ${cy})`}>
+        <circle cx="0" cy="0" r="3" fill="#3B82F6" />
+        <circle cx="0" cy="0" r="6" fill="#3B82F6" fillOpacity="0.3">
+            <animate 
+                attributeName="r" 
+                from="3" 
+                to="12" 
+                dur="1.5s"
+                begin={`${Math.random() * 1.5}s`}
+                repeatCount="indefinite"
+            />
+            <animate 
+                attributeName="opacity" 
+                from="0.5" 
+                to="0" 
+                dur="1.5s" 
+                begin={`${Math.random() * 1.5}s`}
+                repeatCount="indefinite"
+            />
+        </circle>
+    </g>
+);
+

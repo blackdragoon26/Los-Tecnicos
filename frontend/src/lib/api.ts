@@ -50,6 +50,7 @@ export const authApi = {
         api.post('/auth/signup', { wallet_address, signature }),
     login: (wallet_address: string, signature: string) =>
         api.post('/auth/login', { wallet_address, signature }),
+    me: () => api.get('/auth/me'),
 };
 
 export const marketApi = {

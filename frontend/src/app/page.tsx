@@ -2,99 +2,103 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Power, ArrowRight, Shield, Zap, TrendingUp, Globe } from 'lucide-react';
+import { ArrowRight, Zap, ShieldCheck, Cpu, Globe, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center px-6">
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto py-20 lg:py-40 text-center relative">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10"
-        >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-cyber-green/10 text-cyber-green text-sm font-bold border border-cyber-green/20 mb-6 uppercase tracking-widest">
-            Powered by Stellar Soroban
-          </span>
-          <h1 className="text-5xl lg:text-8xl font-black tracking-tighter mb-8 bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent leading-none">
-            THE FUTURE OF <br />
-            <span className="neon-text text-cyber-green">P2P ENERGY</span> IS HERE
-          </h1>
-          <p className="text-lg lg:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Tokenize your excess solar power and trade directly with your community.
-            A decentralized grid powered by IoT mesh networks and transparency.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/dashboard" className="cyber-button group w-full sm:w-auto">
-              <span>GET STARTED</span>
-              <ArrowRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={20} />
-            </Link>
-            <button className="px-8 py-3 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-all font-bold w-full sm:w-auto">
-              VIEW MARKET
-            </button>
+    <div className="bg-neutral-900 text-neutral-100">
+      <main className="min-h-screen">
+        {/* Hero Section */}
+        <section className="relative text-center py-24 sm:py-32 lg:py-48">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <Link href="https://soroban.stellar.org" target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-1.5 rounded-full bg-primary-DEFAULT/10 text-primary-DEFAULT text-sm font-bold border border-primary-DEFAULT/20 mb-6 uppercase tracking-widest hover:bg-primary-DEFAULT/20 transition-colors">
+                Powered by Stellar Soroban
+              </Link>
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+                Decentralized Energy<br />
+                <span className="text-primary-DEFAULT">For a Brighter Future</span>
+              </h1>
+              <p className="max-w-2xl mx-auto text-lg sm:text-xl text-neutral-400 mb-12">
+                Tokenize your excess solar power and trade it directly within your community. Our platform creates a resilient, peer-to-peer energy market powered by IoT and blockchain.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link href="/dashboard" className="w-full sm:w-auto">
+                  <button className="bg-primary-DEFAULT text-primary-foreground hover:bg-primary-DEFAULT/90 font-bold px-8 py-4 rounded-full transition-all duration-300 w-full flex items-center justify-center gap-2 group">
+                    Get Started
+                    <ArrowRight className="inline-block group-hover:translate-x-1 transition-transform" size={20} />
+                  </button>
+                </Link>
+                <Link href="/marketplace" className="w-full sm:w-auto">
+                  <button className="bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 font-bold px-8 py-4 rounded-full transition-colors duration-300 w-full">
+                    View Marketplace
+                  </button>
+                </Link>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+        </section>
 
-        {/* Floating Accents */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full -z-10 blur-[120px] opacity-20 bg-cyber-green/20 rounded-full" />
-      </section>
-
-      {/* Stats Section */}
-      <section className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
-        {[
-          { icon: Power, label: 'Energy Traded', value: '1.2 MWh', color: 'text-cyber-green' },
-          { icon: TrendingUp, label: 'XLM Distributed', value: '45.2k', color: 'text-cyber-stellar' },
-          { icon: Zap, label: 'Active Nodes', value: '2,401', color: 'text-cyber-green' },
-        ].map((stat, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            viewport={{ once: true }}
-            className="glass-card flex flex-col items-center text-center group"
-          >
-            <div className={`p-4 rounded-2xl bg-white/5 mb-4 group-hover:scale-110 transition-transform ${stat.color}`}>
-              <stat.icon size={32} />
+        {/* Stats Section */}
+        <section className="py-24 bg-neutral-800/50">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              {[
+                { icon: Zap, label: 'Energy Traded', value: '1.2 MWh' },
+                { icon: BarChart3, label: 'XLM Distributed', value: '45.2k' },
+                { icon: Globe, label: 'Active Nodes', value: '2,401' },
+              ].map((stat, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  viewport={{ once: true }}
+                >
+                  <div className="flex justify-center items-center mb-4">
+                    <stat.icon size={32} className="text-secondary-DEFAULT" />
+                  </div>
+                  <p className="text-sm text-neutral-400 uppercase tracking-wider mb-1">{stat.label}</p>
+                  <p className="text-4xl font-bold text-neutral-100">{stat.value}</p>
+                </motion.div>
+              ))}
             </div>
-            <span className="text-white/40 text-sm font-medium uppercase tracking-widest mb-1">{stat.label}</span>
-            <span className="text-4xl font-black">{stat.value}</span>
-          </motion.div>
-        ))}
-      </section>
+          </div>
+        </section>
 
-      {/* Features Grid */}
-      <section className="w-full max-w-7xl mx-auto pb-40">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl lg:text-5xl font-bold mb-4">Core Technology</h2>
-          <p className="text-white/50">Bridging the gap between hardware and blockchain.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card border border-cyber-green/20">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Zap className="text-cyber-green" /> ESP32 Integration
-            </h3>
-            <p className="text-white/60">Real-time battery monitoring and energy verification at the source.</p>
+        {/* Features Grid */}
+        <section className="py-24 sm:py-32">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16 sm:mb-20">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">Our Core Technology</h2>
+              <p className="mt-4 max-w-2xl mx-auto text-lg text-neutral-400">
+                Bridging the gap between hardware and a decentralized future.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { icon: Cpu, title: 'ESP32 Integration', description: 'Real-time battery monitoring and energy verification at the source.' },
+                { icon: Globe, title: 'Mesh Network', description: 'Raspberry Pi nodes creating a resilient P2P data mesh for the community.' },
+                { icon: ShieldCheck, title: 'Soroban Smart Contracts', description: 'Trustless matching and settlement using secure, on-chain escrow.' },
+              ].map((feature) => (
+                <div key={feature.title} className="bg-neutral-800 p-8 rounded-2xl border border-neutral-700/50 transform transition-transform duration-300 hover:scale-105 hover:border-primary-DEFAULT/50">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary-DEFAULT/10 mb-6">
+                    <feature.icon className="h-6 w-6 text-primary-DEFAULT" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">{feature.title}</h3>
+                  <p className="text-neutral-400">{feature.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="glass-card border border-cyber-stellar/20">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Globe className="text-cyber-stellar" /> Mesh Network
-            </h3>
-            <p className="text-white/60">Raspberry Pi nodes creating a resilient P2P data mesh for the community.</p>
-          </div>
-          <div className="glass-card border border-white/20">
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Shield className="text-white" /> Soroban Escrow
-            </h3>
-            <p className="text-white/60">Trustless matching and settlement using secure smart contracts.</p>
-          </div>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }
+
