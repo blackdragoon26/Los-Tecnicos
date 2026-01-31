@@ -85,6 +85,7 @@ pub fn get_order(env: Env, order_id: u64) -> Option<EnergyOrder> {
     env.storage().persistent().get(&DataKey::Order(order_id))
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
