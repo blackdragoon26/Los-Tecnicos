@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     ShoppingCart,
@@ -13,19 +13,48 @@ import {
     Zap,
     Tag
 } from 'lucide-react';
+import { useStore } from '@/store/useStore';
+import { marketApi } from '@/lib/api';
 
 export default function Marketplace() {
-    const sellOrders = [
-        { id: 1, amount: '45.0', price: '0.82', total: '36.9', time: '12s ago' },
-        { id: 2, amount: '12.4', price: '0.84', total: '10.4', time: '1m ago' },
-        { id: 3, amount: '105.0', price: '0.85', total: '89.2', time: '3m ago' },
-    ];
+    const { orders, setOrders, isLoading, setLoading } = useStore();
+    const [amount, setAmount] = useState('');
+    const [price, setPrice] = useState('');
 
-    const buyOrders = [
-        { id: 1, amount: '22.0', price: '0.79', total: '17.3', time: '5s ago' },
-        { id: 2, amount: '84.4', price: '0.78', total: '65.8', time: '45s ago' },
-        { id: 3, amount: '10.0', price: '0.75', total: '7.5', time: '2m ago' },
-    ];
+    useEffect(() => {
+        const fetchOrders = async () => {
+            setLoading(true);
+            try {
+                const { data } = await marketApi.getOrders();
+                setOrders(data);
+            } catch (error) {
+                console.error("Failed to fetch orders:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOrders();
+    }, [setOrders, setLoading]);
+
+    const handleCreateOrder = async (type: 'buy' | 'sell') => {
+        try {
+            await marketApi.createOrder({
+                type,
+                kwh_amount: parseFloat(amount),
+                token_price: parseFloat(price)
+            });
+            // Refresh orders
+            const { data } = await marketApi.getOrders();
+            setOrders(data);
+            setAmount('');
+            setPrice('');
+        } catch (error) {
+            console.error("Failed to create order:", error);
+        }
+    };
+
+    const sellOrders = orders.filter(o => o.type === 'sell').slice(0, 5);
+    const buyOrders = orders.filter(o => o.type === 'buy').slice(0, 5);
 
     return (
         <div className="max-w-7xl mx-auto px-6 pb-20">
@@ -40,9 +69,6 @@ export default function Marketplace() {
                             className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-cyber-green/50 transition-all w-64"
                         />
                     </div>
-                    <button className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all">
-                        <Filter size={20} />
-                    </button>
                 </div>
             </div>
 
@@ -54,7 +80,7 @@ export default function Marketplace() {
                         <div className="absolute top-8 left-8">
                             <div className="text-xs uppercase tracking-widest text-white/40 mb-1">Energy Price (XLM/kWh)</div>
                             <div className="text-4xl font-black flex items-center gap-3">
-                                0.82
+                                {orders.length > 0 ? orders[0].token_price : '0.82'}
                                 <span className="text-sm text-cyber-green bg-cyber-green/10 px-2 py-0.5 rounded border border-cyber-green/20">+4.2%</span>
                             </div>
                         </div>
@@ -81,30 +107,64 @@ export default function Marketplace() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-2">Amount (kWh)</label>
-                                    <input type="number" placeholder="0.00" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-green" />
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-green"
+                                    />
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-2">Price per kWh (XLM)</label>
-                                    <input type="number" placeholder="0.00" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-green" />
+                                    <input
+                                        type="number"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-green"
+                                    />
                                 </div>
-                                <button className="cyber-button w-full mt-4">PLACE SELL ORDER</button>
+                                <button
+                                    onClick={() => handleCreateOrder('sell')}
+                                    className="cyber-button w-full mt-4"
+                                >
+                                    PLACE SELL ORDER
+                                </button>
                             </div>
                         </div>
 
-                        <div className="glass-card border border-cyber-stellar/20 opacity-50 cursor-not-allowed">
+                        <div className="glass-card border border-cyber-stellar/20">
                             <h3 className="font-bold mb-6 flex items-center gap-2">
                                 <ArrowUpRight className="text-cyber-stellar" /> BUY ENERGY
                             </h3>
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-2">Amount (kWh)</label>
-                                    <input disabled type="number" placeholder="0.00" className="w-full bg-white/5 border border-white/10 rounded-xl p-3" />
+                                    <input
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-stellar"
+                                    />
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase tracking-widest text-white/40 block mb-2">Max Price (XLM)</label>
-                                    <input disabled type="number" placeholder="0.00" className="w-full bg-white/5 border border-white/10 rounded-xl p-3" />
+                                    <input
+                                        type="number"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-cyber-stellar"
+                                    />
                                 </div>
-                                <button disabled className="w-full mt-4 bg-white/5 text-white/20 py-3 rounded-full font-bold">LOCKED</button>
+                                <button
+                                    onClick={() => handleCreateOrder('buy')}
+                                    className="cyber-button w-full mt-4 !from-cyber-stellar !to-blue-600"
+                                >
+                                    PLACE BUY ORDER
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -126,9 +186,9 @@ export default function Marketplace() {
                                 <div className="space-y-1">
                                     {sellOrders.map(order => (
                                         <div key={order.id} className="grid grid-cols-3 text-xs py-1 px-2 hover:bg-red-500/10 transition-colors rounded">
-                                            <span className="text-red-400 font-bold">{order.price}</span>
-                                            <span className="text-center text-white/70">{order.amount}</span>
-                                            <span className="text-right text-white/40">{order.total}</span>
+                                            <span className="text-red-400 font-bold">{order.token_price}</span>
+                                            <span className="text-center text-white/70">{order.kwh_amount}</span>
+                                            <span className="text-right text-white/40">{(order.kwh_amount * order.token_price).toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -141,28 +201,13 @@ export default function Marketplace() {
                                 <div className="space-y-1">
                                     {buyOrders.map(order => (
                                         <div key={order.id} className="grid grid-cols-3 text-xs py-1 px-2 hover:bg-cyber-green/10 transition-colors rounded">
-                                            <span className="text-cyber-green font-bold">{order.price}</span>
-                                            <span className="text-center text-white/70">{order.amount}</span>
-                                            <span className="text-right text-white/40">{order.total}</span>
+                                            <span className="text-cyber-green font-bold">{order.token_price}</span>
+                                            <span className="text-center text-white/70">{order.kwh_amount}</span>
+                                            <span className="text-right text-white/40">{(order.kwh_amount * order.token_price).toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="glass-card">
-                        <h3 className="font-bold text-xs uppercase tracking-widest text-white/40 mb-6 flex items-center gap-2">
-                            <Zap size={14} className="text-cyber-green" /> Market Trades
-                        </h3>
-                        <div className="space-y-4">
-                            {[1, 2, 4].map(i => (
-                                <div key={i} className="flex items-center justify-between text-xs animate-pulse-slow">
-                                    <span className="text-cyber-green">0.82 XLM</span>
-                                    <span className="text-white/60">12.5 kWh</span>
-                                    <span className="text-white/20">14:24:03</span>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 </div>

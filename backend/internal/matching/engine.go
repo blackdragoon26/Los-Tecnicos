@@ -8,6 +8,7 @@ import (
 	"los-tecnicos/backend/internal/blockchain"
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
+	"los-tecnicos/backend/internal/mqtt"
 )
 
 // RunMatchingEngine starts a background process to match buy and sell orders.
@@ -75,12 +76,19 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 
 					if err != nil {
 						log.Printf("Error processing match: %v", err)
-						// In a real app, you'd want more robust error handling here
 						continue
 					}
 
+					// 4. COORDINATION: Send lock command to donor's IoT device
+					var device domain.IoTDevice
+					if err := database.DB.Where("owner_id = ? AND device_type = ?", sellOrder.UserID, "esp32").First(&device).Error; err == nil {
+						log.Printf("Sending lock command to device: %s", device.ID)
+						mqtt.SendLockCommand(device.ID, sellOrder.ID, sellOrder.KwhAmount)
+					} else {
+						log.Printf("No ESP32 device found for donor %s, skipping IoT lock simulation", sellOrder.UserID)
+					}
+
 					// Trigger blockchain execution (asynchronously)
-					// We can use either order to represent the trade
 					go sorobanClient.HandleTradeExecution(buyOrder)
 					
 					// Break inner loop to move to next sell order

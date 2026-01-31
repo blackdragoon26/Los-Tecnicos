@@ -67,7 +67,6 @@ impl Governance {
             panic!("proposal not active");
         }
 
-        // Simplistic voting: 1 member = 1 vote for this demo
         if support {
             proposal.votes_yes += 1;
         } else {

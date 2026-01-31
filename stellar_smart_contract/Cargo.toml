@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "contracts/energy-token",
+    "contracts/energy_token",
     "contracts/marketplace",
-    "contracts/network-incentives",
+    "contracts/network_incentives",
     "contracts/governance",
 ]
 resolver = "2"

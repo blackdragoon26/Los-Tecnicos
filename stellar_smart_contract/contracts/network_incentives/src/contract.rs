@@ -46,7 +46,6 @@ impl NetworkIncentives {
         let mut node: NetworkNode = env.storage().persistent().get(&DataKey::Node(node_id.clone())).expect("node not found");
         node.packets_routed += packets;
         
-        // Simple reward calculation: 1 stroop per 100 packets
         let new_rewards = (packets / 100) as i128;
         node.rewards_earned += new_rewards;
 
@@ -82,6 +81,6 @@ mod test {
 
         let node = client.get_node_info(&node_id).unwrap();
         assert_eq!(node.packets_routed, 500);
-        assert_eq!(node.rewards_earned, 5); // 500 / 100 = 5
+        assert_eq!(node.rewards_earned, 5); 
     }
 }

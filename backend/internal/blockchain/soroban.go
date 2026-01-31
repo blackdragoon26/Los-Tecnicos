@@ -47,20 +47,22 @@ func (c *SorobanClient) EstimateGas(contractID string, functionName string, args
 func (c *SorobanClient) HandleTradeExecution(order domain.EnergyOrder) {
 	log.Printf("Executing trade for order ID: %s", order.ID)
 	
+	// Real contract function names from Prompt 2:
+	// - marketplace: execute_trade(buy_order_id, sell_order_id, verification_proof)
+	
 	// 1. Estimate gas
 	gas, err := c.EstimateGas("MARKETPLACE_CONTRACT_ID", "execute_trade", order.ID)
 	if err != nil {
 		log.Printf("Error estimating gas: %v", err)
-		// Handle error, maybe retry or fail the order
 		return
 	}
 	log.Printf("Estimated gas: %f XLM", gas)
 
 	// 2. Trigger the smart contract
+	// In a complete implementation, this would involve signing with the admin/escrow key
 	txHash, err := c.TriggerContractCall("MARKETPLACE_CONTRACT_ID", "execute_trade", order.ID)
 	if err != nil {
 		log.Printf("Error triggering contract call: %v", err)
-		// Handle error
 		return
 	}
 

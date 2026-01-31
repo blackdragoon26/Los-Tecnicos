@@ -54,8 +54,8 @@ impl Marketplace {
         let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
         admin.require_auth();
 
-        let mut sell_order = self::get_order(env.clone(), sell_id).expect("sell order not found");
-        let mut buy_order = self::get_order(env.clone(), buy_id).expect("buy order not found");
+        let mut sell_order = get_order(env.clone(), sell_id).expect("sell order not found");
+        let mut buy_order = get_order(env.clone(), buy_id).expect("buy order not found");
 
         if sell_order.status != OrderStatus::Open || buy_order.status != OrderStatus::Open {
             panic!("orders must be open");
@@ -73,8 +73,6 @@ impl Marketplace {
             panic!("buy price too low");
         }
 
-        // Logic for token transfer would go here if energy token was integrated.
-        // For now, we update the status.
         sell_order.status = OrderStatus::Completed;
         buy_order.status = OrderStatus::Completed;
 

@@ -70,3 +70,17 @@ func subscribeToTopics(client mqtt.Client) {
 		}
 	}
 }
+
+// SendLockCommand sends an energy lock request to a donor's ESP32.
+func SendLockCommand(deviceID string, orderID string, kwh float64) error {
+	if Client == nil || !Client.IsConnected() {
+		return fmt.Errorf("MQTT client not connected")
+	}
+
+	topic := fmt.Sprintf("energy/donor/%s/lock", deviceID)
+	payload := fmt.Sprintf(`{"order_id": "%s", "kwh_requested": %f}`, orderID, kwh)
+	
+	token := Client.Publish(topic, 1, false, payload)
+	token.Wait()
+	return token.Error()
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Zap,
@@ -16,6 +16,8 @@ import {
     Globe,
     ShoppingCart
 } from 'lucide-react';
+import { useStore } from '@/store/useStore';
+import { analyticsApi, iotApi } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,12 +29,35 @@ const ROLES = ['Donor', 'Recipient', 'Operator'];
 
 export default function Dashboard() {
     const [activeRole, setActiveRole] = useState('Donor');
+    const { user, setUser, setDevices } = useStore();
+    const [stats, setStats] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [statsRes, devicesRes] = await Promise.all([
+                    analyticsApi.getDashboard(),
+                    iotApi.getDevices()
+                ]);
+                setStats(statsRes.data);
+                setDevices(devicesRes.data);
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+            }
+        };
+        fetchDashboardData();
+    }, [setDevices]);
 
     return (
         <div className="max-w-7xl mx-auto px-6 pb-20">
             {/* Header & Role Switcher */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                <h1 className="text-4xl font-black tracking-tighter">DASHBOARD</h1>
+                <div className="flex flex-col">
+                    <h1 className="text-4xl font-black tracking-tighter uppercase">{activeRole} DASHBOARD</h1>
+                    <p className="text-xs text-white/40 tracking-widest mt-1">
+                        {user?.wallet_address ? `WALLED CONNECTED: ${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'GUEST MODE'}
+                    </p>
+                </div>
 
                 <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
                     {ROLES.map((role) => (
@@ -52,9 +77,9 @@ export default function Dashboard() {
 
             {/* Main Content Area */}
             <AnimatePresence mode="wait">
-                {activeRole === 'Donor' && <DonorView key="donor" />}
-                {activeRole === 'Recipient' && <RecipientView key="recipient" />}
-                {activeRole === 'Operator' && <OperatorView key="operator" />}
+                {activeRole === 'Donor' && <DonorView key="donor" stats={stats} />}
+                {activeRole === 'Recipient' && <RecipientView key="recipient" stats={stats} />}
+                {activeRole === 'Operator' && <OperatorView key="operator" stats={stats} />}
             </AnimatePresence>
         </div>
     );
@@ -79,7 +104,7 @@ function MetricCard({ label, value, subtext, icon: Icon, colorClass }: any) {
     );
 }
 
-function DonorView() {
+function DonorView({ stats }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -89,9 +114,9 @@ function DonorView() {
         >
             {/* Metrics Row */}
             <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 h-fit">
-                <MetricCard icon={Battery} label="Current Storage" value="84%" subtext="+1.2% from production" colorClass="text-cyber-green" />
-                <MetricCard icon={TrendingUp} label="Total Earnings" value="1,240 XLM" subtext="≈ $145.20 USD" colorClass="text-cyber-stellar" />
-                <MetricCard icon={Activity} label="Device Status" value="Online" subtext="ESP32-04X2 Active" colorClass="text-cyber-green" />
+                <MetricCard icon={Battery} label="Grid Capacity" value={stats?.total_energy_traded ? `${stats.total_energy_traded} kWh` : '0.0 kWh'} subtext="Cumulative trading volume" colorClass="text-cyber-green" />
+                <MetricCard icon={TrendingUp} label="Network Users" value={stats?.total_users || '0'} subtext="Active grid participants" colorClass="text-cyber-stellar" />
+                <MetricCard icon={Activity} label="Active Orders" value={stats?.active_orders || '0'} subtext="Live market liquidity" colorClass="text-cyber-green" />
 
                 {/* Large Control Card */}
                 <div className="sm:col-span-3 glass-card flex flex-col md:flex-row items-center gap-8 py-10">
@@ -144,7 +169,7 @@ function DonorView() {
     );
 }
 
-function RecipientView() {
+function RecipientView({ stats }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -156,13 +181,14 @@ function RecipientView() {
                 <div className="text-center">
                     <ShoppingCart size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="uppercase tracking-[0.3em] font-black">Recipient Module Active</p>
+                    <p className="text-xs mt-2">{stats?.total_iot_devices || '0'} Devices Monitored</p>
                 </div>
             </div>
         </motion.div>
     );
 }
 
-function OperatorView() {
+function OperatorView({ stats }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -174,6 +200,7 @@ function OperatorView() {
                 <div className="text-center">
                     <Globe size={48} className="mx-auto mb-4 opacity-10" />
                     <p className="uppercase tracking-[0.3em] font-black">Node Operator Interface</p>
+                    <p className="text-xs mt-2">{stats?.total_network_nodes || '0'} Nodes In Network</p>
                 </div>
             </div>
         </motion.div>
