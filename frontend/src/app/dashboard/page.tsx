@@ -33,6 +33,8 @@ export default function Dashboard() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            if (!user) return; // Don't fetch if no user
+
             try {
                 const [statsRes, devicesRes] = await Promise.all([
                     analyticsApi.getDashboard(),
@@ -45,7 +47,7 @@ export default function Dashboard() {
             }
         };
         fetchDashboardData();
-    }, [setDevices]);
+    }, [user, setDevices]);
 
     return (
         <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
@@ -126,11 +128,11 @@ function DonorView({ stats }: any) {
                         <h2 className="text-2xl font-bold mb-2">Sell Excess Energy</h2>
                         <p className="text-neutral-400 mb-6">Distribute your stored battery power to the grid and earn XLM rewards instantly.</p>
                         <div className="flex gap-4 justify-center md:justify-start">
-                             <button className="bg-primary-DEFAULT text-primary-foreground hover:bg-primary-DEFAULT/90 font-bold px-6 py-3 rounded-full transition-colors">Mint Tokens</button>
+                            <button className="bg-primary-DEFAULT text-primary-foreground hover:bg-primary-DEFAULT/90 font-bold px-6 py-3 rounded-full transition-colors">Mint Tokens</button>
                             <button className="bg-neutral-700 hover:bg-neutral-600 font-bold px-6 py-3 rounded-full transition-colors">Create Order</button>
                         </div>
                     </div>
-                     <div className="relative w-32 h-32 flex items-center justify-center">
+                    <div className="relative w-32 h-32 flex items-center justify-center">
                         <Zap size={48} className="text-primary-DEFAULT" />
                         <motion.div
                             className="absolute inset-0 border-4 border-primary-DEFAULT/20 rounded-full"
@@ -187,7 +189,7 @@ const EmptyState = ({ icon: Icon, title, subtitle }) => (
 
 function RecipientView({ stats }: any) {
     return (
-        <EmptyState 
+        <EmptyState
             icon={ShoppingCart}
             title="Recipient Module Active"
             subtitle={`${stats?.total_iot_devices || '0'} Devices Monitored`}
