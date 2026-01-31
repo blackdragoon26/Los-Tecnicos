@@ -1,0 +1,30 @@
+package cache
+
+import (
+	"context"
+	"fmt"
+	"github.com/redis/go-redis/v9"
+	"los-tecnicos/backend/internal/config"
+)
+
+var Rdb *redis.Client
+
+// Connect initializes the Redis client.
+func Connect() error {
+	addr := config.GetEnv("REDIS_ADDR", "localhost:6379")
+
+	Rdb = redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	// Ping the server to check the connection
+	ctx := context.Background()
+	if _, err := Rdb.Ping(ctx).Result(); err != nil {
+		return fmt.Errorf("failed to connect to redis at %s: %w", addr, err)
+	}
+	
+	fmt.Println("Redis connection successful.")
+	return nil
+}

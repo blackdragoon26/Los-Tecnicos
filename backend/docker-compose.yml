@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=los_tecnicos
+      - REDIS_ADDR=redis:6379
+      - MQTT_BROKER_ADDR=tcp://mosquitto:1883 # Assuming mosquitto is the name of the MQTT service
+    networks:
+      - los-tecnicos-net
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=los_tecnicos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - los-tecnicos-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - los-tecnicos-net
+      
+  # Adding Mosquitto for MQTT as per the prompt's recommendation
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883" # MQTT
+      - "9001:9001" # WebSockets
+    networks:
+      - los-tecnicos-net
+
+volumes:
+  postgres_data:
+
+networks:
+  los-tecnicos-net:
+    driver: bridge
