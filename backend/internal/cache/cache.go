@@ -3,8 +3,9 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"los-tecnicos/backend/internal/config"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var Rdb *redis.Client
@@ -22,9 +23,10 @@ func Connect() error {
 	// Ping the server to check the connection
 	ctx := context.Background()
 	if _, err := Rdb.Ping(ctx).Result(); err != nil {
-		return fmt.Errorf("failed to connect to redis at %s: %w", addr, err)
+		fmt.Printf("Warning: Failed to connect to redis at %s: %v. Continuing without cache.\n", addr, err)
+		return nil
 	}
-	
+
 	fmt.Println("Redis connection successful.")
 	return nil
 }

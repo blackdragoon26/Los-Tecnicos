@@ -5,8 +5,9 @@ import (
 	"log"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"los-tecnicos/backend/internal/config"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 var Client mqtt.Client
@@ -45,7 +46,8 @@ func Connect() error {
 
 	Client = mqtt.NewClient(opts)
 	if token := Client.Connect(); token.Wait() && token.Error() != nil {
-		return fmt.Errorf("failed to connect to MQTT broker at %s: %w", broker, token.Error())
+		log.Printf("Warning: Failed to connect to MQTT broker at %s: %v. Continuing without MQTT.\n", broker, token.Error())
+		return nil
 	}
 
 	return nil
@@ -79,7 +81,7 @@ func SendLockCommand(deviceID string, orderID string, kwh float64) error {
 
 	topic := fmt.Sprintf("energy/donor/%s/lock", deviceID)
 	payload := fmt.Sprintf(`{"order_id": "%s", "kwh_requested": %f}`, orderID, kwh)
-	
+
 	token := Client.Publish(topic, 1, false, payload)
 	token.Wait()
 	return token.Error()

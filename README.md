@@ -28,9 +28,20 @@ A peer-to-peer energy trading platform built on the **Stellar (Soroban)** blockc
 ### 1. Prerequisites
 Ensure you have the following installed:
 -   **Rust & Soroban CLI** (for smart contracts)
--   **Go 1.21+** (for backend)
--   **Node.js 18+ & npm** (for frontend)
+-   **PostgreSQL**: Ensure a local instance is running.
+-   **Redis**: Ensure a local instance is running on port 6379.
 -   **MQTT Broker** (e.g., Mosquitto) running locally on port 1883.
+
+---
+
+### 1.5 Database Setup (PostgreSQL)
+Before running the backend, create the required user and database:
+```bash
+# Create the postgres superuser role (if not present)
+createuser -s postgres
+# Create the project database
+createdb los_tecnicos
+```
 
 ---
 
