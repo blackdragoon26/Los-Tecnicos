@@ -89,7 +89,15 @@ export default function Navbar() {
 
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('refresh_token', data.refresh_token);
-                setUser(data.user);
+
+                // Fetch full user profile immediately to populate store
+                try {
+                    const profile = await authApi.me();
+                    console.log("Fetched user profile:", profile);
+                    setUser(profile);
+                } catch (profileError) {
+                    console.error("Failed to fetch profile after login:", profileError);
+                }
             } catch (loginError: any) {
                 console.warn("Login failed, trying signup...", loginError);
                 if (loginError.response && loginError.response.status === 404) {
@@ -99,7 +107,15 @@ export default function Navbar() {
 
                         localStorage.setItem('access_token', data.access_token);
                         localStorage.setItem('refresh_token', data.refresh_token);
-                        setUser(data.user);
+
+                        // Fetch full user profile immediately
+                        try {
+                            const profile = await authApi.me();
+                            console.log("Fetched user profile:", profile);
+                            setUser(profile);
+                        } catch (profileError) {
+                            console.error("Failed to fetch profile after signup:", profileError);
+                        }
                     } catch (signupError) {
                         console.error("Signup failed:", signupError);
                     }

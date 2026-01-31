@@ -223,6 +223,25 @@ func RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access_token": accessToken})
 }
 
+// Me returns the profile of the currently authenticated user.
+func Me(c *gin.Context) {
+	userId, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var user domain.User
+	// Try fetching from cache first (optional, but good for performance)
+	// For now, let's hit the DB for simplicity and consistency
+	if err := database.DB.Where("id = ?", userId).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User profile not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
 // GetMarketOrders retrieves all open energy orders.
 func GetMarketOrders(c *gin.Context) {
 	var orders []domain.EnergyOrder
@@ -479,6 +498,24 @@ func GetAnalyticsDashboard(c *gin.Context) {
 	stats.TotalEnergyTraded = totalKwh.Float64 // Will be 0.0 if no completed transactions
 
 	c.JSON(http.StatusOK, stats)
+}
+
+// GetUserTransactions retrieves transaction history for the authenticated user.
+func GetUserTransactions(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var transactions []domain.Transaction
+	// Fetch transactions where the user is donor OR recipient
+	if err := database.DB.Where("donor_id = ? OR recipient_id = ?", userID, userID).Order("timestamp desc").Find(&transactions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve transactions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, transactions)
 }
 
 var upgrader = websocket.Upgrader{

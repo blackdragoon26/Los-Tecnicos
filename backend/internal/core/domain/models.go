@@ -29,12 +29,13 @@ type EnergyOrder struct {
 
 // IoTDevice represents a registered IoT device (ESP32 or Raspberry Pi).
 type IoTDevice struct {
-	ID         string    `json:"id"`
-	OwnerID    string    `json:"owner_id" gorm:"not null"`
-	DeviceType string    `json:"device_type" gorm:"not null"` // "esp32" or "raspi"
-	Location   string    `json:"location"`
-	LastPing   time.Time `json:"last_ping"`
-	Status     string    `json:"status" gorm:"not null"` // e.g., Online, Offline, Unregistered
+	ID           string    `json:"id"`
+	OwnerID      string    `json:"owner_id" gorm:"not null"`
+	DeviceType   string    `json:"device_type" gorm:"not null"` // "esp32" or "raspi"
+	Location     string    `json:"location"`
+	BatteryLevel float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge)
+	LastPing     time.Time `json:"last_ping"`
+	Status       string    `json:"status" gorm:"not null"` // e.g., Online, Offline, Unregistered
 }
 
 // Transaction represents a completed energy trade.
@@ -51,10 +52,10 @@ type Transaction struct {
 
 // NetworkNode represents a Raspberry Pi node in the mesh network.
 type NetworkNode struct {
-	ID             string  `json:"id"`
-	OperatorID     string  `json:"operator_id" gorm:"not null"`
-	Location       string  `json:"location"`
-	Uptime         int64   `json:"uptime"` // in seconds
-	PacketsRouted  int64   `json:"packets_routed"`
-	Earnings       float64 `json:"earnings"`
+	ID            string  `json:"id"`
+	OperatorID    string  `json:"operator_id" gorm:"not null"`
+	Location      string  `json:"location"`
+	Uptime        int64   `json:"uptime"` // in seconds
+	PacketsRouted int64   `json:"packets_routed"`
+	Earnings      float64 `json:"earnings"`
 }

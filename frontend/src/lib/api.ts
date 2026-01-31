@@ -68,6 +68,7 @@ export const iotApi = {
 
 export const analyticsApi = {
     getDashboard: () => api.get('/analytics/dashboard'),
+    getTransactions: () => api.get('/analytics/transactions'),
 };
 
 export default api;

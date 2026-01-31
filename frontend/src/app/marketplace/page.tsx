@@ -14,8 +14,15 @@ import Link from 'next/link';
 
 export default function Marketplace() {
     const { user, orders, setOrders, isLoading, setLoading } = useStore();
-    const [amount, setAmount] = useState('');
-    const [price, setPrice] = useState('');
+
+    // Separate state for Sell Order
+    const [sellAmount, setSellAmount] = useState('');
+    const [sellPrice, setSellPrice] = useState('');
+
+    // Separate state for Buy Order
+    const [buyAmount, setBuyAmount] = useState('');
+    const [buyPrice, setBuyPrice] = useState('');
+
     const isAuthenticated = !!user;
 
     useEffect(() => {
@@ -36,6 +43,11 @@ export default function Marketplace() {
     }, [isAuthenticated, setOrders, setLoading]);
 
     const handleCreateOrder = async (type: 'buy' | 'sell') => {
+        const amount = type === 'sell' ? sellAmount : buyAmount;
+        const price = type === 'sell' ? sellPrice : buyPrice;
+
+        if (!amount || !price) return;
+
         try {
             await marketApi.createOrder({
                 type,
@@ -45,8 +57,15 @@ export default function Marketplace() {
             // Refresh orders
             const { data } = await marketApi.getOrders();
             setOrders(data);
-            setAmount('');
-            setPrice('');
+
+            // Clear specific form
+            if (type === 'sell') {
+                setSellAmount('');
+                setSellPrice('');
+            } else {
+                setBuyAmount('');
+                setBuyPrice('');
+            }
         } catch (error) {
             console.error("Failed to create order:", error);
         }
@@ -71,7 +90,7 @@ export default function Marketplace() {
             </div>
         );
     }
-    
+
     return (
         <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -93,10 +112,18 @@ export default function Marketplace() {
                         {/* Chart Placeholder */}
                         <div className="bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6 h-[400px] flex flex-col justify-between">
                             <div>
-                                <p className="text-sm text-neutral-400">Energy Price (XLM/kWh)</p>
+                                <p className="text-sm text-neutral-400">Estimated Market Price (XLM/kWh)</p>
                                 <div className="flex items-baseline gap-3">
-                                    <p className="text-4xl font-bold">{orders.length > 0 ? orders[0].token_price : '0.82'}</p>
-                                    <p className="text-green-400 font-semibold">+4.2%</p>
+                                    <p className="text-4xl font-bold">
+                                        {(() => {
+                                            const lowestSell = sellOrders.length > 0 ? sellOrders[0].token_price : 0;
+                                            const highestBuy = buyOrders.length > 0 ? buyOrders[0].token_price : 0;
+                                            if (lowestSell && highestBuy) return ((lowestSell + highestBuy) / 2).toFixed(4);
+                                            if (lowestSell) return lowestSell.toFixed(4);
+                                            return "0.8200"; // Fallback
+                                        })()}
+                                    </p>
+                                    <p className="text-green-400 font-semibold">Dynamic</p>
                                 </div>
                             </div>
                             <div className="h-48 w-full bg-neutral-700/50 rounded-lg flex items-center justify-center">
@@ -106,8 +133,22 @@ export default function Marketplace() {
 
                         {/* Order Creation */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <OrderForm type="sell" amount={amount} setAmount={setAmount} price={price} setPrice={setPrice} handleCreateOrder={handleCreateOrder} />
-                            <OrderForm type="buy" amount={amount} setAmount={setAmount} price={price} setPrice={setPrice} handleCreateOrder={handleCreateOrder} />
+                            <OrderForm
+                                type="sell"
+                                amount={sellAmount}
+                                setAmount={setSellAmount}
+                                price={sellPrice}
+                                setPrice={setSellPrice}
+                                handleCreateOrder={handleCreateOrder}
+                            />
+                            <OrderForm
+                                type="buy"
+                                amount={buyAmount}
+                                setAmount={setBuyAmount}
+                                price={buyPrice}
+                                setPrice={setBuyPrice}
+                                handleCreateOrder={handleCreateOrder}
+                            />
                         </div>
                     </div>
 

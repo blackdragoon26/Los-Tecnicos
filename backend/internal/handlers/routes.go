@@ -18,6 +18,8 @@ func SetupRoutes(router *gin.Engine) {
 			auth.POST("/signup", SignUp)
 			auth.POST("/login", Login)
 			auth.POST("/refresh", RefreshToken)
+			// Protected auth route to get current user
+			auth.GET("/me", AuthMiddleware(), Me)
 		}
 
 		// Protected routes
@@ -50,6 +52,7 @@ func SetupRoutes(router *gin.Engine) {
 			analytics := protected.Group("/analytics")
 			{
 				analytics.GET("/dashboard", GetAnalyticsDashboard)
+				analytics.GET("/transactions", GetUserTransactions)
 			}
 		}
 	}
