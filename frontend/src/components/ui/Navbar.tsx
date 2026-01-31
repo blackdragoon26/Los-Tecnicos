@@ -17,6 +17,7 @@ const navItems = [
     { name: 'Marketplace', path: '/marketplace', icon: ShoppingCart },
     { name: 'Network', path: '/network', icon: Globe },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { name: 'About', path: '/about', icon: User },
 ];
 
 export default function Navbar() {
