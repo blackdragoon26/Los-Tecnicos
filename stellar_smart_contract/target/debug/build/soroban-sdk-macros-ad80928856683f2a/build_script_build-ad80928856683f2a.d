@@ -1,0 +1,5 @@
+/Users/apple/Los-Tecnicos/stellar smart contract/target/debug/build/soroban-sdk-macros-ad80928856683f2a/build_script_build-ad80928856683f2a.d: /Users/apple/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-sdk-macros-22.0.9/build.rs
+
+/Users/apple/Los-Tecnicos/stellar smart contract/target/debug/build/soroban-sdk-macros-ad80928856683f2a/build_script_build-ad80928856683f2a: /Users/apple/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-sdk-macros-22.0.9/build.rs
+
+/Users/apple/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-sdk-macros-22.0.9/build.rs:
