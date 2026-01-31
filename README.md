@@ -1,199 +1,89 @@
-# Stellar Build-A-Thon Delhi NCR: Decentralized Energy Grid on stellar blockchain, it should include zero knowledge,xray.
-## Introduction
-### Purpose
-- Define the architecture for a blockchain-based peer-to-peer energy trading platform
-- Enable community rooftop solar panels to become tokenized assets
-- Create stable income through localized energy markets
-<img width="1280" height="625" alt="image" src="https://github.com/user-attachments/assets/395a1862-752f-43bb-98e1-366abb62d601" />
+# Decentralized Energy Grid (Stellar Build-A-Thon)
 
+A peer-to-peer energy trading platform built on the **Stellar (Soroban)** blockchain. This project enables community members to trade excess solar energy as tokenized assets, coordinated via IoT and a high-performance Matching Engine.
 
-### Scope
-- Closed community-based energy marketplace
-- Energy donors (sellers with excess solar energy) and receivers (buyers needing energy)
-- Local grid monitoring and verification
-- Scalable architecture for future community superset expansion
-### Definitions
-- **Donor**: Resident with excess energy (solar panels) willing to sell
-- **Receiver**: Resident lacking energy willing to buy
-- **Local Grid Server**: Computing station that monitors and verifies energy transactions
-- **Tokenized Asset**: Digital representation of energy units on the blockchain
-## System Architecture
-### High-Level Overview
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           COMMUNITY ENERGY GRID                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐         ┌──────────────┐         ┌──────────────┐        │
-│  │   DONORS     │         │  RECEIVERS   │         │    ADMIN     │        │
-│  │ (Solar Panel │         │  (Energy     │         │   (Grid      │        │
-│  │  Owners)     │         │   Buyers)    │         │  Operators)  │        │
-│  └──────┬───────┘         └──────┬───────┘         └──────┬───────┘        │
-│         │                        │                        │                 │
-│         └────────────┬───────────┴────────────────────────┘                 │
-│                      │                                                      │
-│                      ▼                                                      │
-│         ┌────────────────────────┐                                          │
-│         │   REACT.JS FRONTEND    │                                          │
-│         │   - Donor Interface    │                                          │
-│         │   - Receiver Interface │                                          │
-│         │   - Market Dashboard   │                                          │
-│         └───────────┬────────────┘                                          │
-│                     │                                                       │
-│                     ▼                                                       │
-│         ┌────────────────────────┐                                          │
-│         │   GOLANG BACKEND       │                                          │
-│         │   - API Gateway        │                                          │
-│         │   - Order Matching     │                                          │
-│         │   - Market Logic       │                                          │
-│         └───────────┬────────────┘                                          │
-│                     │                                                       │
-│        ┌────────────┼────────────┐                                          │
-│        │            │            │                                          │
-│        ▼            ▼            ▼                                          │
-│  ┌───────────┐ ┌─────────┐ ┌─────────────────┐                              │
-│  │ LOCAL     │ │ SOLANA  │ │ ESP32           │                              │
-│  │ GRID      │ │ BLOCKCHAIN│ │ CONTROLLERS   │                              │
-│  │ SERVER    │ │ (Rust/  │ │ (C++ Firmware) │                              │
-│  │           │ │ Anchor) │ │                 │                              │
-│  └─────┬─────┘ └────┬────┘ └────────┬────────┘                              │
-│        │            │               │                                       │
-│        └────────────┼───────────────┘                                       │
-│                     │                                                       │
-│                     ▼                                                       │
-│         ┌────────────────────────┐                                          │
-│         │   ENERGY TRANSFER      │                                          │
-│         │   Donor → Grid → Receiver                                         │
-│         └────────────────────────┘                                          │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-### Component Interaction Flow
-```
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-│  DONOR  │    │RECEIVER │    │ REACT   │    │ GOLANG  │    │ SOLANA  │
-│         │    │         │    │ FRONTEND│    │ BACKEND │    │BLOCKCHAIN│
-└────┬────┘    └────┬────┘    └────┬────┘    └────┬────┘    └────┬────┘
-     │              │              │              │              │
-     │  List Energy │              │              │              │
-     │─────────────────────────────>              │              │
-     │              │              │  Create Offer│              │
-     │              │              │─────────────>│              │
-     │              │              │              │  Mint Tokens │
-     │              │              │              │─────────────>│
-     │              │              │              │              │
-     │              │ Request Energy              │              │
-     │              │─────────────>│              │              │
-     │              │              │ Create Demand│              │
-     │              │              │─────────────>│              │
-     │              │              │              │ Match Orders │
-     │              │              │              │─────────────>│
-     │              │              │              │              │
-     │              │              │  Verify via ESP32           │
-     │              │              │<─────────────│              │
-     │              │              │              │              │
-     │              │              │  Execute Transfer           │
-     │              │              │<─────────────│              │
-     │              │              │              │              │
-```
-## Component Design
-### Frontend (React.js / JavaScript)
-- User authentication and wallet connection
-- Energy listing interface for donors
-- Energy request interface for receivers
-- Real-time market dashboard showing supply/demand
-- Transaction history and analytics
-### Backend (Golang)
-- RESTful API gateway for frontend communication
-- Order matching engine for buy/sell requests
-- Communication bridge to local grid server
-- ESP32 verification coordinator
-- Market state management
-### Blockchain Layer (Rust / Solana / Anchor Framework)
-- Smart contracts for energy token minting
-- Automated trading algorithms
-- On-chain governance mechanisms
-- Transaction recording and verification
-- Cross-chain interoperability preparation
-### Hardware Layer (C++ / ESP32)
-- Energy production monitoring at donor locations
-- Real-time energy availability verification
-- Data transmission to backend for validation
-- Grid connection status monitoring
-### Local Grid Server
-- Central monitoring station for community
-- Energy flow surveillance between donors and receivers
-- Verification hub for ESP32 controller data
-- Physical energy transfer coordination
-## Data Design
-### Data Flow Diagram
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA FLOW                                 │
-└─────────────────────────────────────────────────────────────────┘
+![DASHBOARD](https://github.com/user-attachments/assets/395a1862-752f-43bb-98e1-366abb62d601)
 
-  ┌─────────────┐                              ┌─────────────┐
-  │ SOLAR PANEL │                              │  RECEIVER   │
-  │   (Donor)   │                              │    HOME     │
-  └──────┬──────┘                              └──────▲──────┘
-         │                                            │
-         │ Energy Data                                │ Energy
-         ▼                                            │ Delivery
-  ┌─────────────┐      Verification      ┌───────────┴───────────┐
-  │   ESP32     │─────────────────────────>    LOCAL GRID        │
-  │ CONTROLLER  │      Request           │      SERVER           │
-  └──────┬──────┘                        └───────────┬───────────┘
-         │                                           │
-         │ Sensor Data                               │ Grid Status
-         ▼                                           ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │                     GOLANG BACKEND                           │
-  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-  │  │ Order Book  │  │ Matching    │  │ Verification│          │
-  │  │             │  │ Engine      │  │ Service     │          │
-  │  └─────────────┘  └─────────────┘  └─────────────┘          │
-  └──────────────────────────┬──────────────────────────────────┘
-                             │
-                             │ Transactions
-                             ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │                   SOLANA BLOCKCHAIN                          │
-  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-  │  │ Energy      │  │ Trading     │  │ Governance  │          │
-  │  │ Tokens      │  │ Records     │  │ State       │          │
-  │  └─────────────┘  └─────────────┘  └─────────────┘          │
-  └─────────────────────────────────────────────────────────────┘
+---
+
+## 🏗️ Technical Stack
+
+-   **Blockchain**: Soroban (Stellar Smart Contracts) - Rust
+-   **Backend**: Go (Golang) - Gin, MQTT Coordination, Matching Engine
+-   **Frontend**: Next.js 14, React, Three.js (3D Visuals), Zustand
+-   **IoT**: MQTT Protocol for device energy locking and verification
+
+---
+
+## 📂 Project Structure
+
+-   `stellar_smart_contract/`: Soroban smart contracts (Marketplace, Governance, Tokens).
+-   `backend/`: Go backend handling order matching and IoT bridges.
+-   `frontend/`: Next.js frontend with futuristic 3D dashboards.
+
+---
+
+## 🚀 Local Setup Guide
+
+### 1. Prerequisites
+Ensure you have the following installed:
+-   **Rust & Soroban CLI** (for smart contracts)
+-   **Go 1.21+** (for backend)
+-   **Node.js 18+ & npm** (for frontend)
+-   **MQTT Broker** (e.g., Mosquitto) running locally on port 1883.
+
+---
+
+### 2. Smart Contracts (Soroban)
+```bash
+cd stellar_smart_contract
+# Build all contracts
+cargo build
+# Run unit tests to verify logic
+cargo test
 ```
-### Key Data Entities
-- User profiles (donors/receivers)
-- Energy tokens (minted assets)
-- Market orders (buy/sell requests)
-- Transaction records
-- ESP32 sensor readings
-- Grid status logs
-## Security Considerations
-- Wallet-based authentication for all users
-- Smart contract auditing for token operations
-- Secure communication between ESP32 and backend
-- Data encryption for sensitive transactions
-- Access control for grid operator functions
-## Performance Metrics
-- Transaction finality within Solana block times
-- Order matching latency acceptable within minutes
-- ESP32 polling intervals for energy verification
-- System scalability for community superset expansion
-## Testing Strategy
-- Unit testing for smart contracts
-- Integration testing for backend-blockchain communication
-- Hardware simulation for ESP32 verification flow
-- End-to-end testing for complete trading cycles
-## Deployment Plan
-- Smart contract deployment on Solana devnet/mainnet
-- Backend deployment on community local server
-- ESP32 firmware flashing at donor locations
-- Frontend deployment for web access
-## Future Considerations
-- Superset community integration for globalization
-- Cross-community energy trading
-- Enhanced governance mechanisms
-- Additional renewable energy source support
+
+---
+
+### 3. Backend (Go)
+```bash
+cd backend
+# Install dependencies
+go mod tidy
+# Run the server
+# (Ensure MQTT broker is running at localhost:1883)
+go run cmd/server/main.go
+```
+The backend will start at `http://localhost:8080`.
+
+---
+
+### 4. Frontend (Next.js)
+```bash
+cd frontend
+# Install dependencies
+npm install
+# Start development server
+npm run dev
+```
+The UI will be accessible at `http://localhost:3000`.
+
+---
+
+## 🧪 Local Verification Flow
+
+1.  **Start MQTT Broker**: Ensure your local `mosquitto` or similar broker is active.
+2.  **Launch Backend**: Run the Go server. It will initialize the matching engine.
+3.  **Launch Frontend**: Open the marketplace UI.
+4.  **Simulate Trading**:
+    -   Place a **Sell Order** for 50 kWh at 10 XLM.
+    -   Place a **Buy Order** for 50 kWh at 10 XLM.
+5.  **Observe Logs**:
+    -   Backend will log: `[Matching Engine] Match found!`.
+    -   Backend will log: `[IoT] Sending lock command to device...`.
+    -   The system will attempt to settle the trade on the Stellar network (simulation/devnet).
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
