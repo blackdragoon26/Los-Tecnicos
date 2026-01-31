@@ -4,13 +4,14 @@ import (
 	"log"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"los-tecnicos/backend/internal/blockchain"
 	"los-tecnicos/backend/internal/cache"
 	"los-tecnicos/backend/internal/database"
 	"los-tecnicos/backend/internal/handlers"
 	"los-tecnicos/backend/internal/matching"
 	"los-tecnicos/backend/internal/mqtt"
+
+	"github.com/gin-gonic/gin"
 )
 
 var SorobanClient *blockchain.SorobanClient
@@ -41,6 +42,7 @@ func main() {
 	router := gin.Default()
 
 	// Apply middlewares globally
+	router.Use(handlers.CORSMiddleware())
 	router.Use(gin.Logger()) // Using Gin's default logger as well
 	router.Use(gin.Recovery())
 	router.Use(handlers.AuditMiddleware())

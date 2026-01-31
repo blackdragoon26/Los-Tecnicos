@@ -45,7 +45,7 @@ func Connect() error {
 	opts.SetConnectRetryInterval(5 * time.Second)
 
 	Client = mqtt.NewClient(opts)
-	if token := Client.Connect(); token.Wait() && token.Error() != nil {
+	if token := Client.Connect(); token.WaitTimeout(2*time.Second) && token.Error() != nil {
 		log.Printf("Warning: Failed to connect to MQTT broker at %s: %v. Continuing without MQTT.\n", broker, token.Error())
 		return nil
 	}
