@@ -41,102 +41,74 @@ export default function Navbar() {
 
     const handleConnectWallet = async () => {
         try {
-            console.log("Checking for Freighter...");
-            // Force a check if Freighter is installed
+            console.log("Starting wallet connection...");
             const isInstalled = await import('@stellar/freighter-api').then(m => m.isConnected());
-            console.log("Freighter isConnected:", isInstalled);
+            console.log("Freighter present:", isInstalled);
 
             if (!isInstalled) {
-                alert("Freighter wallet is not installed or not detected. Please install the Freighter extension.");
+                alert("Please install the Freighter Wallet extension to continue.");
                 return;
             }
 
-            // Check if user has allowed the app
             const allowedObj = await isAllowed();
-            console.log("Freighter isAllowed:", allowedObj); // returns { isAllowed: boolean }
+            console.log("Is allowed:", allowedObj);
 
             if (!allowedObj.isAllowed) {
-                console.log("App not allowed, requesting access via setAllowed...");
                 const result = await setAllowed();
-                console.log("setAllowed result:", result);
-                if (!result.isAllowed) {
-                    alert("You must allow Los Tecnicos to access your wallet to continue.");
-                    return;
-                }
+                console.log("Set allowed result:", result);
+                if (!result.isAllowed) return;
             }
 
-            // Now get the address
             const { address } = await getAddress();
-            console.log("Address received:", address);
-
-            if (!address) {
-                // Try asking nicely one more time if address is blank (sometimes race condition?)
-                console.warn("Address was empty, trying one retry...");
-                const retryAddr = await getAddress();
-                if (!retryAddr.address) {
-                    alert("Freighter returned an empty address. Please ensure your wallet is unlocked and has an account created.");
-                    return;
-                }
-                // If retry worked, proceed with retryAddr.address but let's just fail safe for now
-            }
-
-            // Re-assign address just in case we add retry logic fully later, for now address const is used
+            console.log("Address:", address);
             if (!address) return;
 
             const message = "los-tecnicos-auth";
-            console.log("Requesting signature for:", message);
+            console.log("Signing message:", message);
             const { signedMessage } = await signMessage(message);
-            console.log("Signature received status:", signedMessage ? "Present" : "Missing");
+            console.log("Signed message received");
 
-            if (!signedMessage) {
-                alert("Signature request rejected by user.");
-                return;
-            }
+            if (!signedMessage) return;
 
             let signatureBase64 = '';
             if (typeof signedMessage === 'string') {
-                // Convert hex string to base64
-                signatureBase64 = Buffer.from(signedMessage, 'hex').toString('base64');
+                if (signedMessage.length === 128) {
+                    signatureBase64 = Buffer.from(signedMessage, 'hex').toString('base64');
+                } else {
+                    signatureBase64 = signedMessage;
+                }
             } else {
-                // Convert Buffer/Uint8Array to base64
                 signatureBase64 = Buffer.from(signedMessage).toString('base64');
             }
 
-            console.log("Signature prepared, logging in...");
+            console.log("Sending login request to backend...");
 
-            // Logic to fallback to Signup if Login fails with 404
             try {
                 const { data } = await authApi.login(address, signatureBase64);
-                console.log("Login Success:", data);
+                console.log("Login successful, user data:", data);
 
                 localStorage.setItem('access_token', data.access_token);
                 localStorage.setItem('refresh_token', data.refresh_token);
                 setUser(data.user);
-                alert("Login Successful!");
             } catch (loginError: any) {
-                console.warn("Login error details:", loginError);
-
+                console.warn("Login failed, trying signup...", loginError);
                 if (loginError.response && loginError.response.status === 404) {
-                    console.log("User not found, attempting signup...");
                     try {
                         const { data } = await authApi.signup(address, signatureBase64);
-                        console.log("Signup Success:", data);
+                        console.log("Signup successful, user data:", data);
 
                         localStorage.setItem('access_token', data.access_token);
                         localStorage.setItem('refresh_token', data.refresh_token);
                         setUser(data.user);
-                        alert("Account created and logged in!");
-                    } catch (signupError: any) {
+                    } catch (signupError) {
                         console.error("Signup failed:", signupError);
-                        alert(`Signup failed: ${signupError.response?.data?.error || signupError.message}`);
                     }
                 } else {
-                    alert(`Login failed: ${loginError.response?.data?.error || loginError.message}`);
+                    console.error("Login critical error:", loginError);
                 }
             }
-        } catch (error: any) {
-            console.error("Critical wallet connection error:", error);
-            alert(`Failed to connect wallet: ${error.message || error}`);
+        } catch (error) {
+            console.error("Wallet connection error:", error);
         }
     };
 
@@ -181,17 +153,26 @@ export default function Navbar() {
                         </div>
 
                         <div className="flex items-center space-x-4">
-                            <div className='hidden md:flex'>
+                            <div className='hidden md:flex items-center gap-4'>
                                 {user ? (
-                                    <div className="flex items-center space-x-4">
-                                        <div className="bg-green-500/20 text-green-400 border border-green-500/50 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
-                                            <Wallet size={18} />
-                                            <span>{`${user.wallet_address.slice(0, 4)}...${user.wallet_address.slice(-4)}`}</span>
+                                    <>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-medium text-white">
+                                                Hi, <span className="text-primary-DEFAULT">{user.role || 'User'}</span>
+                                            </span>
                                         </div>
-                                        <button onClick={handleLogout} className="text-neutral-400 hover:text-neutral-100">
+                                        <div className="bg-green-500/10 text-green-400 border border-green-500/30 px-4 py-2 rounded-full text-xs font-mono font-bold flex items-center gap-2 hover:bg-green-500/20 transition-colors cursor-default" title={user.wallet_address}>
+                                            <Wallet size={14} />
+                                            <span>{user.wallet_address ? `${user.wallet_address.slice(0, 4)}...${user.wallet_address.slice(-4)}` : 'UNKNOWN'}</span>
+                                        </div>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="text-neutral-400 hover:text-white transition-colors p-2"
+                                            title="Logout"
+                                        >
                                             <LogOut size={20} />
                                         </button>
-                                    </div>
+                                    </>
                                 ) : (
                                     <button
                                         onClick={handleConnectWallet}

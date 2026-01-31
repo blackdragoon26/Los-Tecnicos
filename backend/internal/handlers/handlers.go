@@ -2,11 +2,18 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
+
+	"database/sql"
+	"los-tecnicos/backend/internal/cache"
+	"los-tecnicos/backend/internal/config"
+	"los-tecnicos/backend/internal/core/domain"
+	"los-tecnicos/backend/internal/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,15 +22,11 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/strkey"
-	"los-tecnicos/backend/internal/cache"
-	"los-tecnicos/backend/internal/core/domain"
-	"los-tecnicos/backend/internal/database"
-	"los-tecnicos/backend/internal/config"
-	"database/sql"
 )
 
 // The message that the frontend is expected to sign.
 const challengeMessage = "los-tecnicos-auth"
+
 // In a real app, load this from a secure config
 var jwtSecret = []byte(config.GetEnv("JWT_SECRET", "a-very-secret-key"))
 
@@ -59,7 +62,13 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	err = kp.Verify([]byte(challengeMessage), sig)
+	// Verify signature using Stellar's specific hashing prefix
+	// Freighter signs: SHA256("Stellar Signed Message:\n" + message)
+	prefix := "Stellar Signed Message:\n"
+	prefixedMsg := prefix + challengeMessage
+	hashedMsg := sha256.Sum256([]byte(prefixedMsg))
+
+	err = kp.Verify(hashedMsg[:], sig)
 	if err != nil {
 		log.Printf("Signature verification failed for %s: %v", req.WalletAddress, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
@@ -108,7 +117,13 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse wallet address"})
 		return
 	}
-	if err := kp.Verify([]byte(challengeMessage), sig); err != nil {
+
+	// Verify signature using Stellar's specific hashing prefix
+	prefix := "Stellar Signed Message:\n"
+	prefixedMsg := prefix + challengeMessage
+	hashedMsg := sha256.Sum256([]byte(prefixedMsg))
+
+	if err := kp.Verify(hashedMsg[:], sig); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
 		return
 	}
@@ -152,7 +167,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store refresh token"})
 		return
 	}
-	
+
 	// 5. Update cache with the new user state
 	userJSON, _ := json.Marshal(user)
 	if err := cache.Rdb.Set(context.Background(), userCacheKey, userJSON, 1*time.Hour).Err(); err != nil {
@@ -179,7 +194,6 @@ func createAccessToken(user *domain.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
 }
-
 
 // RefreshToken generates a new access token from a valid refresh token.
 func RefreshToken(c *gin.Context) {
@@ -246,7 +260,7 @@ func CreateOrder(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	// If user is new, assign role based on first action
 	if userRoleStr == "" {
 		newRole := "Recipient"
@@ -258,7 +272,6 @@ func CreateOrder(c *gin.Context) {
 			return
 		}
 	}
-
 
 	newOrder := domain.EnergyOrder{
 		ID:         uuid.New().String(),
@@ -372,6 +385,7 @@ func GetActiveNodes(c *gin.Context) {
 
 	c.JSON(http.StatusOK, nodes)
 }
+
 // RegisterNode registers a new network node for the authenticated user.
 func RegisterNode(c *gin.Context) {
 	var req RegisterNodeRequest
@@ -422,11 +436,11 @@ func RegisterNode(c *gin.Context) {
 
 // DashboardStats defines the structure for the analytics dashboard response.
 type DashboardStats struct {
-	TotalUsers         int64   `json:"total_users"`
-	TotalIoTDevices    int64   `json:"total_iot_devices"`
-	TotalNetworkNodes  int64   `json:"total_network_nodes"`
-	TotalEnergyTraded  float64 `json:"total_energy_traded"` // in kWh
-	ActiveOrders       int64   `json:"active_orders"`
+	TotalUsers        int64   `json:"total_users"`
+	TotalIoTDevices   int64   `json:"total_iot_devices"`
+	TotalNetworkNodes int64   `json:"total_network_nodes"`
+	TotalEnergyTraded float64 `json:"total_energy_traded"` // in kWh
+	ActiveOrders      int64   `json:"active_orders"`
 }
 
 // GetAnalyticsDashboard retrieves real-time market analytics.
