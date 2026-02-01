@@ -267,6 +267,20 @@ func CreateOrder(c *gin.Context) {
 	userIDStr := userID.(string)
 	userRoleStr := userRole.(string)
 
+	// If user is new, assign role based on first action
+	if userRoleStr == "" {
+		newRole := "Recipient"
+		if req.Type == "sell" {
+			newRole = "Donor"
+		}
+		if err := database.DB.Model(&domain.User{}).Where("id = ?", userIDStr).Update("role", newRole).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign user role"})
+			return
+		}
+		// Update local variable for subsequent checks
+		userRoleStr = newRole
+	}
+
 	// A user must be a Donor to create a sell order.
 	if req.Type == "sell" && userRoleStr != "Donor" && userRoleStr != "NetworkNodeOperator" {
 		log.Printf("DEBUG: CreateOrder denied. Type=%s, Role=%s, ID=%s", req.Type, userRoleStr, userIDStr)
@@ -276,22 +290,10 @@ func CreateOrder(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user role to Donor"})
 				return
 			}
-            // Update context manually so subsequent logic works if needed? 
-            // Actually, we should probably just proceed, but let's see if the update works.
+			// Update local variable
+			userRoleStr = "Donor"
 		} else {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Only Donors or Network Node Operators can create sell orders. Your role is: " + userRoleStr})
-			return
-		}
-	}
-
-	// If user is new, assign role based on first action
-	if userRoleStr == "" {
-		newRole := "Recipient"
-		if req.Type == "sell" {
-			newRole = "Donor"
-		}
-		if err := database.DB.Model(&domain.User{}).Where("id = ?", userIDStr).Update("role", newRole).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign user role"})
 			return
 		}
 	}
