@@ -353,7 +353,7 @@ Help us build it.
 
 ---
 
-**GitHub:** [Los-Tecnicos](https://github.com/yourusername/Los-Tecnicos)  
+**GitHub:** [Los-Tecnicos](https://github.com/blackdragoon26/Los-Tecnicos)  
 **Testnet Contracts:** Deployed and functional  
 **Demo:** Available on request
 
