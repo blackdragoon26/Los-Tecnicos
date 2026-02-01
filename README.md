@@ -9,6 +9,10 @@ Link to frontend -https://los-tecnicos-frontend.vercel.app/
 Link to Backend  -https://los-tecnicos-backend.onrender.com/
 (hosted links might be prone to bugs, work still in progress)
 
+
+<img width="1920" height="860" alt="image" src="https://github.com/user-attachments/assets/53998de0-f9d4-4d00-94e2-4f0343f7e06f" />
+
+
 ## The Problem We're Solving
 
 My neighbor installed solar panels last year. Cost him $22,000. Know what the utility company pays him for excess energy? 2 cents per kWh. Meanwhile, I'm paying 28 cents per kWh from the same grid. 
