@@ -50,10 +50,23 @@ export default function Marketplace() {
                 try {
                     const priceRes = await marketApi.getMarketPrice();
                     // priceRes.data contains { price, supply, demand, timestamp, breakdown }
-                    setMarketData(priceRes.data);
+                    const newData = priceRes.data;
+                    setMarketData(newData);
 
-                    const historyRes = await marketApi.getMarketHistory();
-                    setMarketHistory(historyRes.data || []);
+                    // Accumulate history client-side
+                    setMarketHistory(prev => {
+                        const newPoint = {
+                            price: newData.price,
+                            timestamp: new Date(newData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                        };
+
+                        // Keep last 50 points
+                        const newHistory = [...prev, newPoint];
+                        if (newHistory.length > 50) {
+                            return newHistory.slice(newHistory.length - 50);
+                        }
+                        return newHistory;
+                    });
                 } catch (error) {
                     console.error("Failed to fetch market data:", error);
                 }
@@ -280,7 +293,7 @@ export default function Marketplace() {
                                         </ResponsiveContainer>
                                     ) : (
                                         <div className="h-full w-full flex items-center justify-center bg-neutral-900/50 rounded-lg">
-                                            <p className="text-neutral-500">Waiting for market data...</p>
+                                            <p className="text-neutral-500">Starting live tracking...</p>
                                         </div>
                                     )}
                                 </div>
