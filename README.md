@@ -5,7 +5,8 @@
 ![DASHBOARD](https://github.com/user-attachments/assets/395a1862-752f-43bb-98e1-366abb62d601)
 
 ---
-
+Link to frontend -https://los-tecnicos-frontend.vercel.app/dashboard
+Link to Backend  -https://los-tecnicos-backend.onrender.com/
 ## The Problem We're Solving
 
 My neighbor installed solar panels last year. Cost him $22,000. Know what the utility company pays him for excess energy? 2 cents per kWh. Meanwhile, I'm paying 28 cents per kWh from the same grid. 
