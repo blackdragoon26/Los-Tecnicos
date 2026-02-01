@@ -20,8 +20,7 @@ services:
           name: los-tecnicos-redis
           property: connectionString
       - key: JWT_SECRET
-        generate:
-          length: 32
+        sync: false
       - key: ADMIN_SECRET_KEY
         sync: false
       - key: FRONTEND_URL
