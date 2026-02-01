@@ -13,13 +13,17 @@ var DB *gorm.DB
 
 // Connect initializes the database connection and runs auto-migrations.
 func Connect() (*gorm.DB, error) {
-	host := config.GetEnv("DB_HOST", "localhost")
-	port := config.GetEnvAsInt("DB_PORT", 5432)
-	user := config.GetEnv("DB_USER", "postgres")
-	password := config.GetEnv("DB_PASSWORD", "password")
-	dbname := config.GetEnv("DB_NAME", "los_tecnicos")
+	// Check for DATABASE_URL first (common in PaaS like Render)
+	dsn := config.GetEnv("DATABASE_URL", "")
+	if dsn == "" {
+		host := config.GetEnv("DB_HOST", "localhost")
+		port := config.GetEnvAsInt("DB_PORT", 5432)
+		user := config.GetEnv("DB_USER", "postgres")
+		password := config.GetEnv("DB_PASSWORD", "password")
+		dbname := config.GetEnv("DB_NAME", "los_tecnicos")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=UTC", host, user, password, dbname, port)
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=UTC", host, user, password, dbname, port)
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
