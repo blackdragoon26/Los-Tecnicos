@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: los-tecnicos
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: los-tecnicos
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: blackdragoon26/los-tecnicos-backend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: STELLAR_NETWORK
+          value: "TESTNET"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: los-tecnicos
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: los-tecnicos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: blackdragoon26/los-tecnicos-frontend:latest
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: los-tecnicos
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer

@@ -1,0 +1,41 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Backend Tests
+        run: cd backend && go test ./...
+      - name: Run Frontend Tests
+        run: cd frontend && npm test
+      # - name: Run Contract Tests
+      #   run: cd contracts && cargo test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Backend Image
+        run: docker build -t blackdragoon26/los-tecnicos-backend:${{ github.sha }} backend/
+      - name: Build Frontend Image
+        run: docker build -t blackdragoon26/los-tecnicos-frontend:${{ github.sha }} frontend/
+      # In real scenario, perform docker login and push
+      # - name: Push to Registry
+      #   run: |
+      #     docker push blackdragoon26/los-tecnicos-backend:${{ github.sha }}
+      #     docker push blackdragoon26/los-tecnicos-frontend:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Simulating deployment to K8s..."
+          # kubectl set image deployment/backend backend=...
