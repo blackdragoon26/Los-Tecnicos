@@ -35,7 +35,7 @@ func main() {
 
 	// Initialize Soroban client
 	// In a real app, this URL would come from config
-	SorobanClient = blockchain.NewSorobanClient("https://soroban-testnet.stellar.org:443")
+	SorobanClient = blockchain.NewSorobanClient("https://rpc.lightsail.network/")
 
 	// Start the matching engine in the background
 	go matching.RunMatchingEngine(SorobanClient)

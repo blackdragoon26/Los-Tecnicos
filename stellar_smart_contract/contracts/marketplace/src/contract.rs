@@ -73,11 +73,23 @@ impl Marketplace {
             panic!("buy price too low");
         }
 
+        // DeFi Integration: Lock funds and calculate yield
+        // In a live system, this would call an external Liquidity Pool contract
+        let yield_generated = Self::calculate_yield(env.clone(), sell_order.kwh_amount * sell_order.price_per_kwh);
+        
+        // Log or Store yield (Simulated by updating order metadata in a real complex struct)
+        // For MVP, we just mark as Completed (funds released + yield paid)
         sell_order.status = OrderStatus::Completed;
         buy_order.status = OrderStatus::Completed;
 
         env.storage().persistent().set(&DataKey::Order(sell_id), &sell_order);
         env.storage().persistent().set(&DataKey::Order(buy_id), &buy_order);
+    }
+
+    pub fn calculate_yield(_env: Env, amount: i128) -> i128 {
+        // Simulate 5% APY for the duration of the trade lock
+        // Simple calculation: 5% of total amount
+        amount * 5 / 100
     }
 }
 

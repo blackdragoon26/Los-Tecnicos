@@ -10,15 +10,43 @@ import (
 
 // PricingEngine handles the calculation of the real-time energy price.
 type PricingEngine struct {
-	// Configuration parameters could go here
+	Config PricingConfig
+}
+
+// PricingConfig holds the dynamic factors that can be changed via Governance.
+type PricingConfig struct {
 	BasePrice float64 // Default 5.0 XLM
+	Alpha     float64 // Supply/Demand Coefficient (default 0.2)
+	Beta      float64 // SoC Scarcity Coefficient (default 0.5)
+	Gamma     float64 // Distance Penalty Coefficient (default 0.2)
 }
 
 // NewPricingEngine creates a new instance of the pricing engine.
 func NewPricingEngine() *PricingEngine {
+	// 1. Fetch "Live" params from the Governance Simulation
+	// In a real app, this would query the contract state.
+	config := FetchGovernanceParams()
+
 	return &PricingEngine{
-		BasePrice: 5.0,
+		Config: config,
 	}
+}
+
+// FetchGovernanceParams simulates reading the latest passed proposals from the blockchain
+func FetchGovernanceParams() PricingConfig {
+	// Default values
+	config := PricingConfig{
+		BasePrice: 5.0,
+		Alpha:     0.2,
+		Beta:      0.5,
+		Gamma:     0.2, // Default penalty
+	}
+
+	// CHECK: Is there an active "Lower Distance Penalty" proposal that passed?
+	// For the MVP Hardening, we simulate reading the Smart Contract's storage.
+	// In a live production environment, this would execute: `sorobanClient.GetContractData(GovContractID, "config_params")`
+
+	return config
 }
 
 // CalculateDynamicPrice determines the final price per kWh based on 6 factors.
@@ -46,10 +74,10 @@ func (pe *PricingEngine) CalculateDynamicPrice(
 		totalMultiplier = 5.0
 	}
 
-	finalPrice := pe.BasePrice * totalMultiplier
+	finalPrice := pe.Config.BasePrice * totalMultiplier
 
 	breakdown := map[string]float64{
-		"base_price":  pe.BasePrice,
+		"base_price":  pe.Config.BasePrice,
 		"f_sd":        fSD,
 		"f_soc":       fSoC,
 		"f_dist":      fDist,
@@ -66,7 +94,6 @@ func (pe *PricingEngine) CalculateDynamicPrice(
 
 // 1. Supply-Demand Factor: F_sd = 1 + α * ln(Demand / Supply)
 func (pe *PricingEngine) getSupplyDemandFactor(supply, demand float64) float64 {
-	const alpha = 0.2
 	if supply <= 0 {
 		supply = 1 // Avoid division by zero
 	}
@@ -75,23 +102,22 @@ func (pe *PricingEngine) getSupplyDemandFactor(supply, demand float64) float64 {
 	}
 
 	ratio := demand / supply
-	return 1.0 + alpha*math.Log(ratio)
+	return 1.0 + pe.Config.Alpha*math.Log(ratio)
 }
 
 // 2. SoC Factor: F_soc = 1 + β * (1 - SoC_avg)²
 func (pe *PricingEngine) getSoCFactor(socAvg float64) float64 {
-	const beta = 0.5
 	// Using quadratic scarcity: (1 - SoC)^2 accelerates price as battery gets empty
 	deficit := 1.0 - socAvg
-	return 1.0 + beta*(deficit*deficit)
+	return 1.0 + pe.Config.Beta*(deficit*deficit)
 }
 
 // 3. Distance Factor: F_dist = 1 + γ * d_norm (Using simplified distance for now)
 func (pe *PricingEngine) getDistanceFactor(distanceKm float64) float64 {
-	const gamma = 0.2
 	// Normalize distance? Let's assume input is in km.
 	// We apply a linear penalty for distance.
-	return 1.0 + gamma*distanceKm
+	// Governance Control: If 'Gamma' is lowered, local energy trading is incentivized less (or more tolerant of distance).
+	return 1.0 + pe.Config.Gamma*distanceKm
 }
 
 // 4. Time-of-Day Factor

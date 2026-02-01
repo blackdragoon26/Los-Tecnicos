@@ -86,3 +86,12 @@ type PricingHistory struct {
 	TotalDemand  float64   `json:"total_demand"`
 	TotalSupply  float64   `json:"total_supply"`
 }
+
+// YieldRecord tracks the simulated DeFi yield earned by users.
+type YieldRecord struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UserID    string    `json:"user_id" gorm:"index"`
+	Amount    float64   `json:"amount"` // in XLM
+	Source    string    `json:"source"` // e.g. "LiquidityPool_Staking"
+	Timestamp time.Time `json:"timestamp"`
+}

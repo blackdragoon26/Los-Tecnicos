@@ -597,7 +597,7 @@ func GetMarketPrice(c *gin.Context) {
 	dummySell := domain.EnergyOrder{UserID: "user_a", TokenPrice: basePrice} // Use 'user_a' from simulation for quality variance
 
 	pe := pricing.NewPricingEngine()
-	pe.BasePrice = basePrice
+	pe.Config.BasePrice = basePrice
 
 	dynamicPrice, breakdown, _ := pe.CalculateDynamicPrice(dummyBuy, dummySell, supplyVol, demandVol, socAvg, 1.0)
 

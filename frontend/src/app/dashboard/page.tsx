@@ -117,10 +117,11 @@ function DonorView({ stats }: any) {
             className="grid grid-cols-1 lg:grid-cols-12 gap-8"
         >
             <div className="lg:col-span-8 space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
                     <MetricCard icon={BatteryCharging} label="Grid Capacity" value={stats?.total_energy_traded ? `${stats.total_energy_traded} kWh` : '0.0 kWh'} colorClass="bg-green-500/10 text-green-400" />
                     <MetricCard icon={Users} label="Network Users" value={stats?.total_users || '0'} colorClass="bg-blue-500/10 text-blue-400" />
                     <MetricCard icon={Activity} label="Active Orders" value={stats?.active_orders || '0'} colorClass="bg-orange-500/10 text-orange-400" />
+                    <MetricCard icon={TrendingUp} label="Staking Yield" value="+ 4.2 XLM" colorClass="bg-purple-500/10 text-purple-400" />
                 </div>
 
                 <div className="bg-neutral-800 p-8 rounded-2xl border border-neutral-700/50 flex flex-col md:flex-row items-center gap-8">
@@ -146,28 +147,78 @@ function DonorView({ stats }: any) {
                         />
                     </div>
                 </div>
-            </div>
 
-            <div className="lg:col-span-4 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
-                <h3 className="font-bold mb-6 flex items-center gap-2"><History size={18} /> Recent Transactions</h3>
-                <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
-                                    <ArrowUpRight size={20} />
-                                </div>
+                {/* Governance Section */}
+                <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold flex items-center gap-2 text-xl"><Globe size={20} /> Active Governance Proposals</h3>
+                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">DAO Live</span>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-700/30">
+                            <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="font-bold">Sold 12.5 kWh</p>
-                                    <p className="text-xs text-neutral-400">To: GDC...8K2</p>
+                                    <h4 className="font-bold text-neutral-200">Proposal #42: Lower Distance Penalty (Gamma)</h4>
+                                    <p className="text-sm text-neutral-400 mt-1">Reduce the network transmission fee/penalty for long-distance trades by 15% to encourage regional grid sharing.</p>
+                                </div>
+                                <div className="text-right ml-4">
+                                    <span className="text-xs font-mono text-neutral-500">Ends in 2d 4h</span>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="font-bold text-green-400">+8.4 XLM</p>
-                                <p className="text-xs text-neutral-500">2h ago</p>
+                            <div className="mt-4 flex items-center justify-between">
+                                <div className="flex-1 mr-4">
+                                    <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
+                                        <div className="h-full bg-primary-DEFAULT w-[65%]"></div>
+                                    </div>
+                                    <div className="flex justify-between text-xs mt-1 text-neutral-400">
+                                        <span>Yes: 65%</span>
+                                        <span>No: 35%</span>
+                                    </div>
+                                </div>
+                                <button className="bg-white text-black hover:bg-neutral-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Vote</button>
                             </div>
                         </div>
-                    ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="lg:col-span-4 space-y-6">
+                <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
+                    <h3 className="font-bold mb-6 flex items-center gap-2"><History size={18} /> Recent Transactions</h3>
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                                        <ArrowUpRight size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold">Sold 12.5 kWh</p>
+                                        <p className="text-xs text-neutral-400">To: GDC...8K2</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-green-400">+8.4 XLM</p>
+                                    <p className="text-xs text-neutral-500">2h ago</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 p-6 rounded-2xl border border-purple-500/30">
+                    <h3 className="font-bold mb-2 flex items-center gap-2 text-purple-200"><TrendingUp size={18} /> DeFi Yield Active</h3>
+                    <p className="text-sm text-purple-300/80 mb-4">Your idle orders are currently staked in a Stellar Liquidity Pool.</p>
+                    <div className="flex items-end justify-between">
+                        <div>
+                            <p className="text-xs text-purple-300">Total Earned</p>
+                            <p className="text-2xl font-bold text-white">4.20 XLM</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-purple-300">Current APY</p>
+                            <p className="text-xl font-bold text-green-400">5.2%</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </motion.div>

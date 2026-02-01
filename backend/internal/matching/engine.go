@@ -9,6 +9,7 @@ import (
 	"los-tecnicos/backend/internal/database"
 	"los-tecnicos/backend/internal/mqtt"
 	"los-tecnicos/backend/internal/pricing"
+	"los-tecnicos/backend/internal/zk"
 
 	"gorm.io/gorm"
 )
@@ -69,10 +70,38 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 			if buyOrder.TokenPrice >= dynamicPrice {
 				// Quantity condition: for simplicity, we match the exact amount for now
 				if buyOrder.KwhAmount == sellOrder.KwhAmount {
+
+					// --- ZK PRIVACY CHECK (Simulated Device Logic) ---
+					// The Seller provides a ZK Proof that their battery > 20% without revealing it.
+					// 1. Seller creates proof (Simulated here as if coming from device)
+					// In a real system, the 'device' sends this proof attached to the order.
+
+					// Use the new Ristretto255 implementation
+					zkCommitment, err := zk.NewPedersenCommitment(int64(socAvg * 100)) // Using Avg SoC as proxy for seller's real soc
+					if err != nil {
+						log.Printf("ZK Setup Failed for seller %s: %v", sellOrder.UserID, err)
+						continue
+					}
+
+					proof, err := zkCommitment.GenerateRangeProof(20) // Requirement: > 20% charge
+					if err != nil {
+						log.Printf("ZK Proof Generation Failed for seller %s: %v", sellOrder.UserID, err)
+						continue // Skip if they can't prove battery health
+					}
+
+					// 2. Matching Engine Verifies the Proof
+					if !zk.VerifyRangeProof(proof) {
+						log.Printf("ZK Proof Verification FAILED for seller %s. Rejecting match.", sellOrder.UserID)
+						continue
+					}
+					log.Printf(">>> ZK PRIVACY: Seller %s proved Battery > 20%% with Commitment %s", sellOrder.UserID, proof.CommitmentStr)
+					// ------------------------------------
+
 					log.Printf("Match found! Buy: %s, Sell: %s", buyOrder.ID, sellOrder.ID)
 					log.Printf("Settlement Price: %f (Dynamic) vs %f (Ask)", dynamicPrice, sellOrder.TokenPrice)
 
-					err := database.DB.Transaction(func(tx *gorm.DB) error {
+					// 3. Match found - Execute Transaction
+					dbErr := database.DB.Transaction(func(tx *gorm.DB) error {
 						// Update orders
 						if err := tx.Model(&buyOrder).Update("status", "Matched").Error; err != nil {
 							return err
@@ -95,11 +124,29 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						if err := tx.Create(&transaction).Error; err != nil {
 							return err
 						}
+
+						// --- DEFI YIELD ACCRUAL (Persistence) ---
+						// If the order sat for a while, they earned yield.
+						// Simulating "Instant" yield for the demo.
+						yieldAmount := buyOrder.KwhAmount * dynamicPrice * 0.05 / 365
+						yieldRecord := domain.YieldRecord{
+							UserID:    sellOrder.UserID,
+							Amount:    yieldAmount,
+							Source:    "LiquidityPool_Staking",
+							Timestamp: time.Now(),
+						}
+						if err := tx.Create(&yieldRecord).Error; err != nil {
+							log.Printf("Failed to persist yield: %v", err)
+							// Don't fail the trade for yield error, just log it
+						}
+						log.Printf(">>> DEFI: Persisted Yield Record of %.6f XLM for User %s", yieldAmount, sellOrder.UserID)
+						// ----------------------------------------
+
 						return nil
 					})
 
-					if err != nil {
-						log.Printf("Error processing match: %v", err)
+					if dbErr != nil {
+						log.Printf("Error processing match: %v", dbErr)
 						continue
 					}
 
