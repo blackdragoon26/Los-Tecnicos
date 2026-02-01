@@ -1,30 +1,34 @@
-# Stage 1: Build the Go binary
-FROM golang:1.21-alpine AS builder
+# Build stage
+FROM golang:1.23.4-alpine AS builder
+
+# Install build tools
+RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy go.mod and go.sum files and download dependencies
+# Copy go.mod and go.sum files
 COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
 
-# Copy the rest of the source code
+# Copy the source code
 COPY . .
 
 # Build the application
-# -ldflags="-w -s" strips debugging information, making the binary smaller
-# CGO_ENABLED=0 is important for creating a static binary that can run in a scratch image
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /app/main ./cmd/api
+# CGO_ENABLED=0 ensures a static binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
 
-# Stage 2: Create the final, minimal image
-FROM scratch
+# Production stage
+FROM alpine:latest
 
-WORKDIR /app
+WORKDIR /root/
 
-# Copy the static binary from the builder stage
+# Copy the binary from builder
 COPY --from=builder /app/main .
 
-# Expose the port the app runs on
+# Expose the application port
 EXPOSE 8080
 
-# Set the entrypoint
-ENTRYPOINT ["/app/main"]
+# Run the application
+CMD ["./main"]
