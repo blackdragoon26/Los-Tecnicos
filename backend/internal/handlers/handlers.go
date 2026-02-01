@@ -148,9 +148,8 @@ func Login(c *gin.Context) {
 			return
 		}
 	} else {
-		log.Printf("Redis error on Get: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
+		// Log error but proceed to DB (Fail-safe for Redis downtime)
+		log.Printf("Warning: Redis error on Get (continuing to DB): %v", err)
 	}
 
 	// 3. Generate Access Token (short-lived)

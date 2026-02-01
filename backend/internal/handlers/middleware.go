@@ -59,8 +59,8 @@ func RateLimiter(limit int, window time.Duration) gin.HandlerFunc {
 		pipe.Expire(context.Background(), key, window)
 		_, err := pipe.Exec(context.Background())
 		if err != nil {
-			log.Printf("Failed to execute rate limit pipeline: %v", err)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			log.Printf("Warning: Rate limit pipeline failed (Redis down?): %v", err)
+			c.Next()
 			return
 		}
 
