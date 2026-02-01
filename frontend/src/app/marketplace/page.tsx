@@ -113,6 +113,8 @@ export default function Marketplace() {
     const sellOrders = orders.filter(o => o.type === 'sell').slice(0, 10);
     const buyOrders = orders.filter(o => o.type === 'buy').slice(0, 10);
 
+    const currentPrice = marketData?.price || 0;
+
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen bg-neutral-900 text-neutral-100 pt-24 sm:pt-28 flex items-center justify-center">
@@ -306,16 +308,14 @@ export default function Marketplace() {
                                 type="sell"
                                 amount={sellAmount}
                                 setAmount={setSellAmount}
-                                price={sellPrice}
-                                setPrice={setSellPrice}
+                                currentPrice={currentPrice}
                                 handleCreateOrder={handleCreateOrder}
                             />
                             <OrderForm
                                 type="buy"
                                 amount={buyAmount}
                                 setAmount={setBuyAmount}
-                                price={buyPrice}
-                                setPrice={setBuyPrice}
+                                currentPrice={currentPrice}
                                 handleCreateOrder={handleCreateOrder}
                             />
                         </div>
@@ -336,8 +336,10 @@ export default function Marketplace() {
     );
 }
 
-const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder }: any) => {
+const OrderForm = ({ type, amount, setAmount, currentPrice, handleCreateOrder }: any) => {
     const isSell = type === 'sell';
+    const total = amount ? (parseFloat(amount) * currentPrice) : 0;
+
     return (
         <div className="bg-neutral-800 border border-neutral-700/50 rounded-2xl p-6">
             <h3 className={`font-bold mb-6 flex items-center gap-2 text-lg ${isSell ? 'text-red-400' : 'text-green-400'}`}>
@@ -345,8 +347,28 @@ const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder
                 {isSell ? 'Sell Energy' : 'Buy Energy'}
             </h3>
             <div className="space-y-4">
-                <FormInput id={`amount-${type}`} label="Amount (kWh)" value={amount} onChange={(e: any) => setAmount(e.target.value)} placeholder="0.00" />
-                <FormInput id={`price-${type}`} label={isSell ? "Price per kWh (XLM)" : "Max Price (XLM)"} value={price} onChange={(e: any) => setPrice(e.target.value)} placeholder="0.00" />
+                <FormInput
+                    id={`amount-${type}`}
+                    label="Amount (kWh)"
+                    value={amount}
+                    onChange={(e: any) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                />
+                <FormInput
+                    id={`price-${type}`}
+                    label={isSell ? "Price per kWh (XLM)" : "Max Price (XLM)"}
+                    value={currentPrice > 0 ? currentPrice.toFixed(4) : "Loading..."}
+                    readOnly
+                    className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-3 text-neutral-400 cursor-not-allowed"
+                />
+
+                {amount && (
+                    <div className="flex justify-between items-center text-sm font-mono bg-neutral-700/30 p-2 rounded">
+                        <span className="text-neutral-400">Est. Total:</span>
+                        <span className="text-neutral-200">{total.toFixed(4)} XLM</span>
+                    </div>
+                )}
+
                 <button
                     onClick={() => handleCreateOrder(type)}
                     className={`w-full mt-4 font-bold py-3 px-4 rounded-lg transition-colors ${isSell ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
@@ -358,14 +380,14 @@ const OrderForm = ({ type, amount, setAmount, price, setPrice, handleCreateOrder
     );
 };
 
-const FormInput = ({ id, label, ...props }: any) => (
+const FormInput = ({ id, label, className, ...props }: any) => (
     <div>
         <label htmlFor={id} className="text-sm text-neutral-400 block mb-2">{label}</label>
         <input
             id={id}
-            type="number"
+            type={props.type || "number"}
+            className={className || "w-full bg-neutral-700/50 border border-neutral-600 rounded-lg p-3 focus:outline-none focus:border-primary-DEFAULT focus:ring-1 focus:ring-primary-DEFAULT transition-colors"}
             {...props}
-            className="w-full bg-neutral-700/50 border border-neutral-600 rounded-lg p-3 focus:outline-none focus:border-primary-DEFAULT focus:ring-1 focus:ring-primary-DEFAULT transition-colors"
         />
     </div>
 );
