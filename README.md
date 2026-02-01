@@ -2,7 +2,7 @@
 
 > Built for Stellar Build-A-Thon | Making solar panels profitable for everyone
 
-![DASHBOARD](https://github.com/user-attachments/assets/395a1862-752f-43bb-98e1-366abb62d601)
+<img width="1280" height="625" alt="540369150-395a1862-752f-43bb-98e1-366abb62d601-2" src="https://github.com/user-attachments/assets/d818ba40-320a-4d6b-b3c5-79b62bdb5790" />
 
 ---
 Link to frontend -https://los-tecnicos-frontend.vercel.app/dashboard
