@@ -269,14 +269,17 @@ func CreateOrder(c *gin.Context) {
 
 	// A user must be a Donor to create a sell order.
 	if req.Type == "sell" && userRoleStr != "Donor" && userRoleStr != "NetworkNodeOperator" {
+		log.Printf("DEBUG: CreateOrder denied. Type=%s, Role=%s, ID=%s", req.Type, userRoleStr, userIDStr)
 		// Let's be lenient and auto-update the role if they are just a Recipient
 		if userRoleStr == "Recipient" {
 			if err := database.DB.Model(&domain.User{}).Where("id = ?", userIDStr).Update("role", "Donor").Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user role to Donor"})
 				return
 			}
+            // Update context manually so subsequent logic works if needed? 
+            // Actually, we should probably just proceed, but let's see if the update works.
 		} else {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Only Donors or Network Node Operators can create sell orders."})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only Donors or Network Node Operators can create sell orders. Your role is: " + userRoleStr})
 			return
 		}
 	}

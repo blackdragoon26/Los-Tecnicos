@@ -20,17 +20,41 @@ export default function Marketplace() {
 
     // Separate state for Sell Order
     const [sellAmount, setSellAmount] = useState('');
-    const [sellPrice, setSellPrice] = useState('');
 
     // Separate state for Buy Order
     const [buyAmount, setBuyAmount] = useState('');
-    const [buyPrice, setBuyPrice] = useState('');
 
     // Market Data State
     const [marketData, setMarketData] = useState<any>(null); // Holds price, breakdown, etc.
     const [marketHistory, setMarketHistory] = useState<any[]>([]);
 
     const isAuthenticated = !!user;
+
+    const fetchMarketData = React.useCallback(async () => {
+        try {
+            const priceRes = await marketApi.getMarketPrice();
+            // priceRes.data contains { price, supply, demand, timestamp, breakdown }
+            const newData = priceRes.data;
+            setMarketData(newData);
+
+            // Accumulate history client-side
+            setMarketHistory(prev => {
+                const newPoint = {
+                    price: newData.price,
+                    timestamp: new Date(newData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                };
+
+                // Keep last 50 points
+                const newHistory = [...prev, newPoint];
+                if (newHistory.length > 50) {
+                    return newHistory.slice(newHistory.length - 50);
+                }
+                return newHistory;
+            });
+        } catch (error) {
+            console.error("Failed to fetch market data:", error);
+        }
+    }, [setMarketData, setMarketHistory]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -46,32 +70,6 @@ export default function Marketplace() {
                 }
             };
 
-            const fetchMarketData = async () => {
-                try {
-                    const priceRes = await marketApi.getMarketPrice();
-                    // priceRes.data contains { price, supply, demand, timestamp, breakdown }
-                    const newData = priceRes.data;
-                    setMarketData(newData);
-
-                    // Accumulate history client-side
-                    setMarketHistory(prev => {
-                        const newPoint = {
-                            price: newData.price,
-                            timestamp: new Date(newData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                        };
-
-                        // Keep last 50 points
-                        const newHistory = [...prev, newPoint];
-                        if (newHistory.length > 50) {
-                            return newHistory.slice(newHistory.length - 50);
-                        }
-                        return newHistory;
-                    });
-                } catch (error) {
-                    console.error("Failed to fetch market data:", error);
-                }
-            };
-
             fetchOrders();
             fetchMarketData();
 
@@ -79,11 +77,11 @@ export default function Marketplace() {
             const interval = setInterval(fetchMarketData, 10000);
             return () => clearInterval(interval);
         }
-    }, [isAuthenticated, setOrders, setLoading]);
+    }, [isAuthenticated, setOrders, setLoading, fetchMarketData]);
 
     const handleCreateOrder = async (type: 'buy' | 'sell') => {
         const amount = type === 'sell' ? sellAmount : buyAmount;
-        const price = type === 'sell' ? sellPrice : buyPrice;
+        const price = marketData?.price; // Use real-time price
 
         if (!amount || !price) return;
 
@@ -97,13 +95,14 @@ export default function Marketplace() {
             const { data } = await marketApi.getOrders();
             setOrders(data);
 
+            // Immediately refresh market price/stats to reflect the new order's impact
+            await fetchMarketData();
+
             // Clear specific form
             if (type === 'sell') {
                 setSellAmount('');
-                setSellPrice('');
             } else {
                 setBuyAmount('');
-                setBuyPrice('');
             }
         } catch (error) {
             console.error("Failed to create order:", error);
