@@ -1,4 +1,4 @@
-# Los Tecnicos - P2P Solar Energy Marketplace
+# Los Tecnicos - Stelltron
 
 > Built for Stellar Build-A-Thon | Making solar panels profitable for everyone
 
@@ -28,7 +28,7 @@ We're fixing this with blockchain.
 
 ## What We Built
 
-Los Tecnicos is a peer-to-peer energy marketplace running on Stellar. Think of it as a local energy exchange where:
+Stelltron is a peer-to-peer energy marketplace running on Stellar. Think of it as a local energy exchange where:
 
 - Solar owners list their excess energy for sale
 - Neighbors buy it at fair market prices
