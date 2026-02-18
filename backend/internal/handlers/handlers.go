@@ -135,21 +135,25 @@ func Login(c *gin.Context) {
 	userCacheKey := "user:" + req.WalletAddress
 	cachedUser, err := cache.Rdb.Get(context.Background(), userCacheKey).Result()
 
+	userFoundInCache := false
 	if err == nil {
 		// Cache hit
-		if err := json.Unmarshal([]byte(cachedUser), &user); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deserialize cached user"})
-			return
+		if err := json.Unmarshal([]byte(cachedUser), &user); err == nil {
+			userFoundInCache = true
+		} else {
+			log.Printf("Failed to deserialize cached user: %v", err)
 		}
-	} else if err == redis.Nil {
-		// Cache miss, fetch from DB
+	} else if err != redis.Nil {
+		// Log error but proceed to DB (Fail-safe for Redis downtime)
+		log.Printf("Warning: Redis error on Get (continuing to DB): %v", err)
+	}
+
+	if !userFoundInCache {
+		// Cache miss or error, fetch from DB
 		if err := database.DB.Where("wallet_address = ?", req.WalletAddress).First(&user).Error; err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found. Please sign up first."})
 			return
 		}
-	} else {
-		// Log error but proceed to DB (Fail-safe for Redis downtime)
-		log.Printf("Warning: Redis error on Get (continuing to DB): %v", err)
 	}
 
 	// 3. Generate Access Token (short-lived)
@@ -165,6 +169,7 @@ func Login(c *gin.Context) {
 	user.RefreshTokenExpiresAt = time.Now().Add(7 * 24 * time.Hour)
 
 	if err := database.DB.Save(&user).Error; err != nil {
+		log.Printf("Failed to save user with refresh token: %v. UserID: %s", err, user.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store refresh token"})
 		return
 	}

@@ -10,7 +10,6 @@ import { twMerge } from 'tailwind-merge';
 import { useStore } from '@/store/useStore';
 import { authApi } from '@/lib/api';
 import { getAddress, signMessage, isAllowed, setAllowed } from '@stellar/freighter-api';
-import { Buffer } from 'buffer';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -75,12 +74,19 @@ export default function Navbar() {
             let signatureBase64 = '';
             if (typeof signedMessage === 'string') {
                 if (signedMessage.length === 128) {
-                    signatureBase64 = Buffer.from(signedMessage, 'hex').toString('base64');
+                    // Convert hex to base64 using browser native API
+                    const hexString = signedMessage;
+                    const match = hexString.match(/\w{2}/g);
+                    if (match) {
+                        const uint8Array = new Uint8Array(match.map(h => parseInt(h, 16)));
+                        signatureBase64 = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
+                    }
                 } else {
                     signatureBase64 = signedMessage;
                 }
             } else {
-                signatureBase64 = Buffer.from(signedMessage).toString('base64');
+                // signedMessage is likely a Uint8Array or similar
+                signatureBase64 = btoa(String.fromCharCode.apply(null, Array.from(signedMessage)));
             }
 
             console.log("Sending login request to backend...");
@@ -120,13 +126,22 @@ export default function Navbar() {
                         }
                     } catch (signupError) {
                         console.error("Signup failed:", signupError);
+                        const msg = signupError instanceof Error ? signupError.message : "Using sign up failed";
+                        alert(`Signup failed: ${msg}`);
                     }
                 } else {
                     console.error("Login critical error:", loginError);
+                    let msg = loginError.message || "Login failed";
+                    if (loginError.response && loginError.response.data && loginError.response.data.error) {
+                        msg = loginError.response.data.error;
+                    }
+                    alert(`Login failed: ${msg}`);
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Wallet connection error:", error);
+            const msg = error.message || "Unknown error";
+            alert(`Wallet connection error: ${msg}`);
         }
     };
 
