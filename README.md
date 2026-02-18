@@ -281,7 +281,7 @@ cd stellar_smart_contract
 # Start backend
 cd ../backend
 docker-compose up -d
-go run cmd/server/main.go
+go run cmd/api/main.go
 
 # Start frontend
 cd ../frontend
