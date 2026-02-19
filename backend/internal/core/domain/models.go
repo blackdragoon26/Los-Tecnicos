@@ -33,9 +33,23 @@ type IoTDevice struct {
 	OwnerID      string    `json:"owner_id" gorm:"not null"`
 	DeviceType   string    `json:"device_type" gorm:"not null"` // "esp32" or "raspi"
 	Location     string    `json:"location"`
-	BatteryLevel float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge)
+	BatteryLevel float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge), normalized from Pi's 0-100
 	LastPing     time.Time `json:"last_ping"`
-	Status       string    `json:"status" gorm:"not null"` // e.g., Online, Offline, Unregistered
+	Status       string    `json:"status" gorm:"not null"` // e.g., online, offline
+	State        string    `json:"state"`                   // IDLE, CHARGING, FAULT, etc. from real Pi
+	Source       string    `json:"source"`                  // e.g., "rpi_energy_grid"
+}
+
+// NodeDetail stores per-node telemetry from the Raspberry Pi mesh network.
+type NodeDetail struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	DeviceID  string    `json:"device_id" gorm:"index;not null"` // FK to IoTDevice.ID (the Pi that reported this)
+	UID       string    `json:"uid" gorm:"not null"`             // NODE_A, NODE_B, etc.
+	IP        string    `json:"ip"`
+	Voltage   float64   `json:"voltage"`
+	SoC       float64   `json:"soc"`   // 0-100 raw percentage
+	State     string    `json:"state"` // IDLE, FAULT, etc.
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Transaction represents a completed energy trade.

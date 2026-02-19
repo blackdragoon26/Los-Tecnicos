@@ -40,6 +40,7 @@ func Connect() (*gorm.DB, error) {
 		&domain.DeviceQualityMetrics{},
 		&domain.PricingHistory{},
 		&domain.YieldRecord{},
+		&domain.NodeDetail{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)

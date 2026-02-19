@@ -34,11 +34,13 @@ func main() {
 	}
 
 	// Initialize Soroban client
-	// In a real app, this URL would come from config
 	SorobanClient = blockchain.NewSorobanClient("https://rpc.lightsail.network/")
 
 	// Start the matching engine in the background
 	go matching.RunMatchingEngine(SorobanClient)
+
+	// Seed production IoT devices (real hardware only, no fake data)
+	handlers.SeedProductionDevices()
 
 	// Start IoT SSE Broker
 	handlers.StartBroker()
@@ -47,10 +49,10 @@ func main() {
 
 	// Apply middlewares globally
 	router.Use(handlers.CORSMiddleware())
-	router.Use(gin.Logger()) // Using Gin's default logger as well
+	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(handlers.AuditMiddleware())
-	router.Use(handlers.RateLimiter(1000, time.Minute)) // Increased limit for dev
+	router.Use(handlers.RateLimiter(1000, time.Minute))
 
 	// A simple health check endpoint
 	router.GET("/ping", func(c *gin.Context) {
