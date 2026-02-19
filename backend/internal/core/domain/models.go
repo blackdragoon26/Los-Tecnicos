@@ -36,8 +36,8 @@ type IoTDevice struct {
 	BatteryLevel float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge), normalized from Pi's 0-100
 	LastPing     time.Time `json:"last_ping"`
 	Status       string    `json:"status" gorm:"not null"` // e.g., online, offline
-	State        string    `json:"state"`                   // IDLE, CHARGING, FAULT, etc. from real Pi
-	Source       string    `json:"source"`                  // e.g., "rpi_energy_grid"
+	State        string    `json:"state"`                  // IDLE, CHARGING, FAULT, etc. from real Pi
+	Source       string    `json:"source"`                 // e.g., "rpi_energy_grid"
 }
 
 // NodeDetail stores per-node telemetry from the Raspberry Pi mesh network.
@@ -108,4 +108,26 @@ type YieldRecord struct {
 	Amount    float64   `json:"amount"` // in XLM
 	Source    string    `json:"source"` // e.g. "LiquidityPool_Staking"
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// ScheduleCommand stores the latest action assigned to each node by the scheduler.
+type ScheduleCommand struct {
+	ID       uint      `json:"id" gorm:"primaryKey"`
+	DeviceID string    `json:"device_id" gorm:"index;not null"`
+	NodeUID  string    `json:"node_uid" gorm:"not null"`
+	Action   string    `json:"action" gorm:"not null"` // "charge", "supply", "idle"
+	Reason   string    `json:"reason"`
+	IssuedAt time.Time `json:"issued_at"`
+}
+
+// ScheduleLog is an append-only audit log of every scheduling decision for analytics.
+type ScheduleLog struct {
+	ID            uint      `json:"id" gorm:"primaryKey"`
+	DeviceID      string    `json:"device_id" gorm:"index;not null"`
+	NodeUID       string    `json:"node_uid" gorm:"not null"`
+	Action        string    `json:"action" gorm:"not null"`
+	SoCAtTime     float64   `json:"soc_at_time"`
+	VoltageAtTime float64   `json:"voltage_at_time"`
+	Reason        string    `json:"reason"`
+	Timestamp     time.Time `json:"timestamp" gorm:"index"`
 }

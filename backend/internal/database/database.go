@@ -41,6 +41,8 @@ func Connect() (*gorm.DB, error) {
 		&domain.PricingHistory{},
 		&domain.YieldRecord{},
 		&domain.NodeDetail{},
+		&domain.ScheduleCommand{},
+		&domain.ScheduleLog{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)

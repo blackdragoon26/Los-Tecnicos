@@ -6,6 +6,7 @@ import (
 
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
+	"los-tecnicos/backend/internal/scheduling"
 )
 
 // PricingEngine handles the calculation of the real-time energy price.
@@ -106,7 +107,15 @@ func (pe *PricingEngine) getSupplyDemandFactor(supply, demand float64) float64 {
 }
 
 // 2. SoC Factor: F_soc = 1 + β * (1 - SoC_avg)²
-func (pe *PricingEngine) getSoCFactor(socAvg float64) float64 {
+// Uses real grid SoC from scheduler if available, otherwise falls back to passed-in value.
+func (pe *PricingEngine) getSoCFactor(socAvgFallback float64) float64 {
+	// Try to get real-time grid SoC from the scheduler's data
+	realSoC, _, _ := scheduling.GetGridSoC("rpi-4b-prod-01")
+	socAvg := socAvgFallback
+	if realSoC > 0 {
+		socAvg = realSoC / 100.0 // normalize 0-100 to 0-1 for pricing formula
+	}
+
 	// Using quadratic scarcity: (1 - SoC)^2 accelerates price as battery gets empty
 	deficit := 1.0 - socAvg
 	return 1.0 + pe.Config.Beta*(deficit*deficit)
