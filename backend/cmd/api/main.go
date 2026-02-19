@@ -45,6 +45,9 @@ func main() {
 	simulation.SeedMockData()
 	simulation.StartSimulation()
 
+	// Start IoT SSE Broker
+	handlers.StartBroker()
+
 	router := gin.Default()
 
 	// Apply middlewares globally

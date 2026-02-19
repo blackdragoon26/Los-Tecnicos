@@ -9,6 +9,10 @@ func SetupRoutes(router *gin.Engine) {
 	// WebSocket endpoint
 	router.GET("/ws/market", MarketDataWS)
 
+	// IoT SSE endpoint (Public)
+	router.GET("/iot/events", HandleIoTEventStream)
+	router.POST("/iot/ping", HandleIoTPing)
+
 	// Group routes under /api/v1
 	v1 := router.Group("/api/v1")
 	{

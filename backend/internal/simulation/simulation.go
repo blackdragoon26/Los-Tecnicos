@@ -27,6 +27,7 @@ func SeedMockData() {
 		{ID: "esp32_a", OwnerID: "user_a", DeviceType: "esp32", Location: "28.6139,77.2090", BatteryLevel: 0.85, Status: "Online"},
 		{ID: "esp32_c", OwnerID: "user_c", DeviceType: "esp32", Location: "28.7041,77.1025", BatteryLevel: 0.45, Status: "Online"},
 		{ID: "raspi_node_1", OwnerID: "admin", DeviceType: "raspi", Location: "28.6150,77.2100", Status: "Online"},
+		{ID: "rpi-4b-sim-001", OwnerID: "user_b", DeviceType: "raspi", Location: "28.6205,77.2155", Status: "Online"},
 	}
 
 	for _, d := range devices {

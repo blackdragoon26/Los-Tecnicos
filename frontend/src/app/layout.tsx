@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/ui/Navbar";
 import AppInitializer from "@/components/AppInitializer";
 import LiquidChrome from "@/components/ui/LiquidChrome";
+import IoTConsoleLogger from "@/components/IoTConsoleLogger";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,16 +25,17 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}>
-            <LiquidChrome
-              baseColor={[0.05, 0.07, 0.1]}
-              speed={0.1}
-              amplitude={0.2}
-              frequencyX={4}
-              frequencyY={4}
-              interactive={true}
-            />
+          <LiquidChrome
+            baseColor={[0.05, 0.07, 0.1]}
+            speed={0.1}
+            amplitude={0.2}
+            frequencyX={4}
+            frequencyY={4}
+            interactive={true}
+          />
         </div>
         <AppInitializer>
+          <IoTConsoleLogger />
           <Navbar />
           <main className="min-h-screen">
             {children}
