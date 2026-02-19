@@ -14,6 +14,11 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/iot/ping", HandleIoTPing)
 	router.POST("/iot/cmd", HandleIoTCmd)
 
+	// IoT Debug/Transfer endpoints (Public — for testing)
+	router.GET("/iot/nodes/:device_id", HandleGetNodes)
+	router.POST("/iot/transfer", HandleTransfer)
+	router.POST("/iot/transfer/stop", HandleTransferStop)
+
 	// Group routes under /api/v1
 	v1 := router.Group("/api/v1")
 	{
