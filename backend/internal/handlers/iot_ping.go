@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -33,7 +34,7 @@ type PiPingPayload struct {
 	Voltage             float64             `json:"voltage"`
 	ConnectedNodesCount int                 `json:"connected_nodes_count"`
 	ConnectedNodes      []ConnectedNodeInfo `json:"connected_nodes"`
-	BatteryLevel        float64             `json:"battery_level"` // Optional
+	BatteryLevel        float64             `json:"battery_level"`
 }
 
 // Broker manages the SSE clients
@@ -54,7 +55,6 @@ func NewBroker() *Broker {
 	}
 }
 
-// Global broker instance
 var IoTBroker = NewBroker()
 
 func (b *Broker) Run() {
@@ -64,7 +64,6 @@ func (b *Broker) Run() {
 			b.mutex.Lock()
 			b.Clients[client] = true
 			b.mutex.Unlock()
-			log.Println("New SSE client connected")
 
 		case client := <-b.Unregister:
 			b.mutex.Lock()
@@ -73,7 +72,6 @@ func (b *Broker) Run() {
 				close(client)
 			}
 			b.mutex.Unlock()
-			log.Println("SSE client disconnected")
 
 		case event := <-b.Broadcast:
 			b.mutex.Lock()
@@ -94,7 +92,7 @@ func StartBroker() {
 	go IoTBroker.Run()
 }
 
-// HandleIoTEventStream handles the SSE connection
+// HandleIoTEventStream handles the SSE connection for the frontend
 func HandleIoTEventStream(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -103,7 +101,6 @@ func HandleIoTEventStream(c *gin.Context) {
 
 	clientChan := make(chan IoTEvent)
 	IoTBroker.Register <- clientChan
-
 	defer func() {
 		IoTBroker.Unregister <- clientChan
 	}()
@@ -126,75 +123,107 @@ func HandleIoTEventStream(c *gin.Context) {
 	})
 }
 
-// HandleIoTPing receives data from the Raspberry Pi and updates the DB
+// HandleIoTPing receives data from the Raspberry Pi
 func HandleIoTPing(c *gin.Context) {
 	var payload PiPingPayload
-	// Bind JSON to struct to validate schema
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON or Schema mismatch: " + err.Error()})
+		log.Printf("[IoT-PING] ❌ Bad JSON from %s: %v", c.ClientIP(), err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON: " + err.Error()})
 		return
 	}
 
-	// 1. Persist Data for Pricing Engine
+	// Log the full incoming payload for debugging
+	nodeVoltages := ""
+	for _, n := range payload.ConnectedNodes {
+		nodeVoltages += fmt.Sprintf("  → %s: %.2fV\n", n.UID, n.Voltage)
+	}
+	log.Printf("[IoT-PING] 📡 Ping received from IP: %s\n"+
+		"  device_id:             %s\n"+
+		"  voltage:               %.2fV\n"+
+		"  battery_level:         %.1f%%\n"+
+		"  connected_nodes_count: %d\n"+
+		"  connected_nodes:\n%s",
+		c.ClientIP(),
+		payload.DeviceID,
+		payload.Voltage,
+		payload.BatteryLevel,
+		payload.ConnectedNodesCount,
+		nodeVoltages,
+	)
+
+	// Auto-register device if it doesn't exist yet
 	go func(p PiPingPayload) {
-		// Update IoT Device Status & Battery (SoC)
 		var device domain.IoTDevice
-		if err := database.DB.Where("id = ?", p.DeviceID).First(&device).Error; err == nil {
-			// Found device, update it
-			device.BatteryLevel = p.BatteryLevel
+		err := database.DB.Where("id = ?", p.DeviceID).First(&device).Error
+		if err != nil {
+			// Device not found — auto-register it
+			device = domain.IoTDevice{
+				ID:           p.DeviceID,
+				OwnerID:      "auto-registered",
+				DeviceType:   "raspi",
+				Location:     "",
+				BatteryLevel: p.BatteryLevel / 100.0, // normalize 0-100 → 0.0-1.0
+				LastPing:     time.Now(),
+				Status:       "online",
+			}
+			if createErr := database.DB.Create(&device).Error; createErr != nil {
+				log.Printf("[IoT-PING] ⚠️  Could not auto-register device %s: %v", p.DeviceID, createErr)
+				return
+			}
+			log.Printf("[IoT-PING] ✅ Auto-registered new device: %s", p.DeviceID)
+		} else {
+			// Update existing device
+			device.BatteryLevel = p.BatteryLevel / 100.0
 			device.LastPing = time.Now()
 			device.Status = "online"
-			// Ensure Location stores neighbor info if possible, or just log it for now as we don't have a dedicated graph table yet
 			database.DB.Save(&device)
+		}
 
-			// Update Device Quality Metrics (Voltage)
-			var metrics domain.DeviceQualityMetrics
-			// Calculate average voltage (self + neighbors)
-			totalVoltage := p.Voltage
-			count := 1.0
-			for _, node := range p.ConnectedNodes {
-				totalVoltage += node.Voltage
-				count++
-			}
-			avgVoltage := totalVoltage / count
+		// Calculate average voltage (self + all neighbors)
+		totalVoltage := p.Voltage
+		count := 1.0
+		for _, node := range p.ConnectedNodes {
+			totalVoltage += node.Voltage
+			count++
+		}
+		avgVoltage := totalVoltage / count
 
-			// Calculate deviation from 230V
-			deviation := avgVoltage - 230.0
-			if deviation < 0 {
-				deviation = -deviation
-			}
-			// Score: 100 - deviation. If deviation > 100, score is 0.
-			score := 100.0 - deviation
-			if score < 0 {
-				score = 0
-			}
+		// Voltage stability score: 100 - deviation from 230V
+		deviation := avgVoltage - 230.0
+		if deviation < 0 {
+			deviation = -deviation
+		}
+		score := 100.0 - deviation
+		if score < 0 {
+			score = 0
+		}
 
-			if err := database.DB.Where("device_id = ?", device.ID).First(&metrics).Error; err == nil {
-				metrics.LastUpdated = time.Now()
-				metrics.VoltageStability = score
-				database.DB.Save(&metrics)
-			} else {
-				newMetrics := domain.DeviceQualityMetrics{
-					DeviceID:           device.ID,
-					VoltageStability:   score,
-					BatteryHealthScore: 100.0, // Default
-					LastUpdated:        time.Now(),
-				}
-				database.DB.Create(&newMetrics)
-			}
+		log.Printf("[IoT-PING] 📊 Device %s → avgVoltage=%.2fV, stabilityScore=%.1f", p.DeviceID, avgVoltage, score)
+
+		// Upsert DeviceQualityMetrics
+		var metrics domain.DeviceQualityMetrics
+		if err := database.DB.Where("device_id = ?", device.ID).First(&metrics).Error; err == nil {
+			metrics.VoltageStability = score
+			metrics.LastUpdated = time.Now()
+			database.DB.Save(&metrics)
 		} else {
-			log.Printf("Warning: Ping received from unknown device ID: %s", p.DeviceID)
+			newMetrics := domain.DeviceQualityMetrics{
+				DeviceID:           device.ID,
+				VoltageStability:   score,
+				BatteryHealthScore: 100.0,
+				LastUpdated:        time.Now(),
+			}
+			database.DB.Create(&newMetrics)
 		}
 	}(payload)
 
-	// 2. Broadcast to Frontend
-	// We convert the struct back to a map or generic JSON for the frontend to display everything
+	// Build event payload for frontend SSE broadcast
 	msgPayload := map[string]interface{}{
 		"device_id":             payload.DeviceID,
 		"voltage":               payload.Voltage,
+		"battery_level":         payload.BatteryLevel,
 		"connected_nodes_count": payload.ConnectedNodesCount,
 		"connected_nodes":       payload.ConnectedNodes,
-		"battery_level":         payload.BatteryLevel,
 	}
 
 	event := IoTEvent{
@@ -205,5 +234,8 @@ func HandleIoTPing(c *gin.Context) {
 
 	IoTBroker.Broadcast <- event
 
-	c.JSON(http.StatusOK, gin.H{"status": "received", "updated": true})
+	c.JSON(http.StatusOK, gin.H{
+		"status": "received",
+		"event":  event,
+	})
 }

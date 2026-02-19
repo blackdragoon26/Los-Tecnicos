@@ -11,7 +11,6 @@ import (
 	"los-tecnicos/backend/internal/handlers"
 	"los-tecnicos/backend/internal/matching"
 	"los-tecnicos/backend/internal/mqtt"
-	"los-tecnicos/backend/internal/simulation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,10 +39,6 @@ func main() {
 
 	// Start the matching engine in the background
 	go matching.RunMatchingEngine(SorobanClient)
-
-	// Seed mock data and start simulation
-	simulation.SeedMockData()
-	simulation.StartSimulation()
 
 	// Start IoT SSE Broker
 	handlers.StartBroker()
