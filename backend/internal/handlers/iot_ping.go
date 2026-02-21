@@ -190,6 +190,12 @@ func SeedProductionDevices() {
 		log.Printf("[SEED] Cleared %d stale schedule commands (nodes will idle)", cmdResult.RowsAffected)
 	}
 
+	// Clear ALL simulated network nodes (these inflate the "Active Nodes" count)
+	nodeResult := database.DB.Exec("DELETE FROM network_nodes")
+	if nodeResult.RowsAffected > 0 {
+		log.Printf("[SEED] Cleaned up %d stale network nodes", nodeResult.RowsAffected)
+	}
+
 	log.Println("[SEED] Cleaned up old simulation data (fake users, devices, metrics)")
 
 	// ── Seed real production devices ──
