@@ -1,15 +1,34 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, ShieldCheck, Cpu, Globe, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import { analyticsApi } from '@/lib/api';
 
 export default function LandingPage() {
+  const [stats, setStats] = useState({ energy: '0', tokens: '0', nodes: '0' });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await analyticsApi.getDashboard();
+        setStats({
+          energy: `${res.data.total_energy_traded.toFixed(2)} kWh`,
+          tokens: `${(res.data.total_energy_traded * 0.5).toFixed(1)} XLM`, // Example derived metric if actual tokens aren't tracked
+          nodes: `${res.data.total_network_nodes + res.data.total_iot_devices}`,
+        });
+      } catch (err) {
+        setStats({ energy: '0 kWh', tokens: '0 XLM', nodes: '0' });
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div className="bg-neutral-900 text-neutral-100">
       <main className="min-h-screen">
-        {/* Hero Section */}
+        {/*Hero Section */}
         <section className="relative text-center py-24 sm:py-32 lg:py-48">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -49,9 +68,9 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               {[
-                { icon: Zap, label: 'Energy Traded', value: '1.2 MWh' },
-                { icon: BarChart3, label: 'XLM Distributed', value: '45.2k' },
-                { icon: Globe, label: 'Active Nodes', value: '2,401' },
+                { icon: Zap, label: 'Energy Traded', value: stats.energy },
+                { icon: BarChart3, label: 'XLM Distributed', value: stats.tokens },
+                { icon: Globe, label: 'Active Nodes', value: stats.nodes },
               ].map((stat, i) => (
                 <motion.div
                   key={i}

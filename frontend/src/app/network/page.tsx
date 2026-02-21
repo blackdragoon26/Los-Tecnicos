@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Globe, MapPin, Activity, Zap, Cpu } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://los-tecnicos-backend.onrender.com/api/v1';
+const API_BASE = 'https://los-tecnicos-backend.onrender.com/api/v1';
 
 export default function NetworkMap() {
     const [stats, setStats] = useState<any>(null);
