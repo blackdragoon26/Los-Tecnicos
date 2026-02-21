@@ -350,19 +350,28 @@ export default function DebugTransferPage() {
             {/* Transfer Controls — always visible */}
             <div className="bg-gray-800/60 border border-gray-700 rounded-lg p-5 mb-6 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold text-gray-300 mb-4">Transfer Control</h2>
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Sender:</span>
-                        <span className={`font-mono font-bold ${sender ? 'text-orange-400' : 'text-gray-600'}`}>
-                            {sender || '(none)'}
-                        </span>
+                <p className="text-gray-500 text-xs mb-4 font-mono">API: {ROOT_URL}</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label className="text-xs text-gray-400 block mb-1">Sender Node UID</label>
+                        <input
+                            type="text"
+                            value={sender}
+                            onChange={(e) => setSender(e.target.value.toUpperCase())}
+                            placeholder="e.g. NODE_A"
+                            className="w-full bg-gray-900 border border-orange-500/30 rounded px-3 py-2 text-sm font-mono text-orange-400 placeholder-gray-600 focus:border-orange-500 focus:outline-none"
+                        />
                     </div>
-                    <span className="text-gray-600">→</span>
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Receiver:</span>
-                        <span className={`font-mono font-bold ${receiver ? 'text-green-400' : 'text-gray-600'}`}>
-                            {receiver || '(none)'}
-                        </span>
+                    <div>
+                        <label className="text-xs text-gray-400 block mb-1">Receiver Node UID</label>
+                        <input
+                            type="text"
+                            value={receiver}
+                            onChange={(e) => setReceiver(e.target.value.toUpperCase())}
+                            placeholder="e.g. NODE_B"
+                            className="w-full bg-gray-900 border border-green-500/30 rounded px-3 py-2 text-sm font-mono text-green-400 placeholder-gray-600 focus:border-green-500 focus:outline-none"
+                        />
                     </div>
                 </div>
 
