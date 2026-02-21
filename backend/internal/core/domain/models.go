@@ -131,3 +131,103 @@ type ScheduleLog struct {
 	Reason        string    `json:"reason"`
 	Timestamp     time.Time `json:"timestamp" gorm:"index"`
 }
+
+// ──────────────────────────────────────────────────────────────
+// Energy Metering → Token Minting
+// ──────────────────────────────────────────────────────────────
+
+// EnergyMint records every minting event when a donor discharges energy.
+type EnergyMint struct {
+	ID              uint      `json:"id" gorm:"primaryKey"`
+	DeviceID        string    `json:"device_id" gorm:"index;not null"`
+	SenderUID       string    `json:"sender_uid" gorm:"not null"`
+	ReceiverUID     string    `json:"receiver_uid" gorm:"not null"`
+	KwhTransferred  float64   `json:"kwh_transferred" gorm:"not null"`
+	TokensMinted    float64   `json:"tokens_minted" gorm:"not null"`
+	QualityFactor   float64   `json:"quality_factor"`
+	AvgVoltage      float64   `json:"avg_voltage"`
+	AvgCurrent      float64   `json:"avg_current"`
+	DurationSeconds float64   `json:"duration_seconds"`
+	TxHash          string    `json:"tx_hash"`                                 // Soroban mint tx hash
+	Status          string    `json:"status" gorm:"not null;default:'minted'"` // minted, listed, sold, burned
+	Timestamp       time.Time `json:"timestamp" gorm:"index"`
+}
+
+// TokenBurn records every burn event when energy tokens are consumed.
+type TokenBurn struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	MintID       uint      `json:"mint_id" gorm:"index"`  // FK to EnergyMint
+	OrderID      string    `json:"order_id" gorm:"index"` // FK to EnergyOrder that was matched
+	TokensBurned float64   `json:"tokens_burned" gorm:"not null"`
+	BurnReason   string    `json:"burn_reason" gorm:"not null"` // "trade_settlement", "expiry", "manual"
+	TxHash       string    `json:"tx_hash"`                     // Soroban burn tx hash
+	Timestamp    time.Time `json:"timestamp" gorm:"index"`
+}
+
+// ──────────────────────────────────────────────────────────────
+// DeFi: Liquidity Pool
+// ──────────────────────────────────────────────────────────────
+
+// LiquidityPool tracks user stakes in the energy liquidity pool.
+type LiquidityPool struct {
+	ID            uint      `json:"id" gorm:"primaryKey"`
+	UserID        string    `json:"user_id" gorm:"index;not null"`
+	AmountStaked  float64   `json:"amount_staked" gorm:"not null"`
+	SharePercent  float64   `json:"share_percent"`
+	APY           float64   `json:"apy"` // Current annualized yield
+	YieldEarned   float64   `json:"yield_earned"`
+	Status        string    `json:"status" gorm:"default:'active'"` // active, unstaking, withdrawn
+	StakedAt      time.Time `json:"staked_at"`
+	LastYieldCalc time.Time `json:"last_yield_calc"`
+}
+
+// ──────────────────────────────────────────────────────────────
+// DeFi: Flash Energy Lending
+// ──────────────────────────────────────────────────────────────
+
+// FlashLoan records flash energy loans (borrow now, repay within epoch).
+type FlashLoan struct {
+	ID              uint       `json:"id" gorm:"primaryKey"`
+	BorrowerID      string     `json:"borrower_id" gorm:"index;not null"`
+	KwhBorrowed     float64    `json:"kwh_borrowed" gorm:"not null"`
+	TokenCollateral float64    `json:"token_collateral"`
+	InterestRate    float64    `json:"interest_rate"` // e.g. 0.3% per flash
+	RepaymentDue    time.Time  `json:"repayment_due"`
+	RepaidAt        *time.Time `json:"repaid_at"`
+	Status          string     `json:"status" gorm:"default:'active'"` // active, repaid, liquidated
+	CreatedAt       time.Time  `json:"created_at"`
+}
+
+// ──────────────────────────────────────────────────────────────
+// Carbon Credits
+// ──────────────────────────────────────────────────────────────
+
+// CarbonCredit tracks CO₂ savings from peer-to-peer energy trading.
+type CarbonCredit struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	DeviceID    string    `json:"device_id" gorm:"index;not null"`
+	KwhOffset   float64   `json:"kwh_offset" gorm:"not null"`   // kWh traded P2P instead of grid
+	CO2SavedKg  float64   `json:"co2_saved_kg" gorm:"not null"` // kWh × emission factor
+	CreditValue float64   `json:"credit_value"`                 // Estimated value in XLM
+	Timestamp   time.Time `json:"timestamp" gorm:"index"`
+}
+
+// ──────────────────────────────────────────────────────────────
+// DePIN: Hardware Registry
+// ──────────────────────────────────────────────────────────────
+
+// DePINNode records on-chain registered physical hardware nodes.
+type DePINNode struct {
+	ID              uint      `json:"id" gorm:"primaryKey"`
+	DeviceID        string    `json:"device_id" gorm:"uniqueIndex;not null"` // Maps to IoTDevice.ID
+	OperatorWallet  string    `json:"operator_wallet" gorm:"index"`
+	HardwareType    string    `json:"hardware_type"` // "rpi4b", "esp32", etc.
+	FirmwareVersion string    `json:"firmware_version"`
+	TotalKwhRouted  float64   `json:"total_kwh_routed"`
+	TotalUptime     int64     `json:"total_uptime"` // seconds
+	RewardsEarned   float64   `json:"rewards_earned"`
+	ReliabilityPct  float64   `json:"reliability_pct"`  // 0-100 uptime percentage
+	OnChainTxHash   string    `json:"on_chain_tx_hash"` // Soroban registration tx
+	RegisteredAt    time.Time `json:"registered_at"`
+	LastSeen        time.Time `json:"last_seen"`
+}

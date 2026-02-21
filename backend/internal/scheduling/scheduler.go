@@ -72,10 +72,51 @@ func Schedule(deviceID string, nodes []NodeState) ([]NodeCommand, GridSummary) {
 		return []NodeCommand{}, GridSummary{}
 	}
 
-	// Build a map of previous states from the DB
+	// ─── Check for active MANUAL transfer commands ───
+	// Only discharge/charge when explicitly triggered from frontend via /iot/transfer
+	var activeTransfers []domain.ScheduleCommand
+	database.DB.Where("device_id = ? AND action IN ?", deviceID, []string{"discharge", "charge"}).Find(&activeTransfers)
+
+	// Build a map of active manual commands: nodeUID → action
+	manualCommands := map[string]string{}
+	for _, t := range activeTransfers {
+		manualCommands[t.NodeUID] = t.Action
+	}
+
+	// If there are active manual transfers, use those. Otherwise all nodes idle.
+	commands := make([]NodeCommand, n)
+	for i, nd := range nodes {
+		if action, hasManual := manualCommands[nd.UID]; hasManual {
+			commands[i] = NodeCommand{
+				NodeID: nd.UID,
+				Action: action,
+				Reason: fmt.Sprintf("manual transfer command (%s)", action),
+			}
+		} else {
+			commands[i] = NodeCommand{
+				NodeID: nd.UID,
+				Action: "idle",
+				Reason: "no active transfer — standing by",
+			}
+		}
+	}
+
+	summary := buildSummary(commands, nodes)
+	persistDecisions(deviceID, commands, nodes)
+	return commands, summary
+}
+
+// ScheduleAuto is the OLD auto-pairing logic, kept for reference but NOT called by /iot/cmd.
+// It can be invoked manually if auto-balancing is desired in the future.
+func ScheduleAuto(deviceID string, nodes []NodeState) ([]NodeCommand, GridSummary) {
+	n := len(nodes)
+
+	if n == 0 {
+		return []NodeCommand{}, GridSummary{}
+	}
+
 	prevState := getPreviousStates(deviceID)
 
-	// ─── Edge case: single node → keep previous state ───
 	if n == 1 {
 		prev := getPrevAction(prevState, nodes[0].UID)
 		cmd := NodeCommand{
@@ -88,7 +129,6 @@ func Schedule(deviceID string, nodes []NodeState) ([]NodeCommand, GridSummary) {
 		return []NodeCommand{cmd}, summary
 	}
 
-	// ─── Check if all nodes are balanced (within deadband) → no transfer ───
 	minSoC, maxSoC := nodes[0].SoC, nodes[0].SoC
 	for _, nd := range nodes {
 		if nd.SoC < minSoC {
@@ -113,7 +153,6 @@ func Schedule(deviceID string, nodes []NodeState) ([]NodeCommand, GridSummary) {
 		return commands, summary
 	}
 
-	// ─── Sort nodes by SoC ascending (lowest first) ───
 	sorted := make([]NodeState, n)
 	copy(sorted, nodes)
 	sort.Slice(sorted, func(i, j int) bool {

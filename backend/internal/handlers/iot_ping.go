@@ -177,6 +177,19 @@ func SeedProductionDevices() {
 	for _, id := range fakeUserIDs {
 		database.DB.Where("id = ?", id).Delete(&domain.User{})
 	}
+
+	// Clean up stale test orders that spam the matching engine
+	result := database.DB.Where("status = ?", "Created").Delete(&domain.EnergyOrder{})
+	if result.RowsAffected > 0 {
+		log.Printf("[SEED] Cleaned up %d stale test orders", result.RowsAffected)
+	}
+
+	// Clear stale discharge/charge commands so nodes default to idle on restart
+	cmdResult := database.DB.Where("action IN ?", []string{"discharge", "charge"}).Delete(&domain.ScheduleCommand{})
+	if cmdResult.RowsAffected > 0 {
+		log.Printf("[SEED] Cleared %d stale schedule commands (nodes will idle)", cmdResult.RowsAffected)
+	}
+
 	log.Println("[SEED] Cleaned up old simulation data (fake users, devices, metrics)")
 
 	// ── Seed real production devices ──

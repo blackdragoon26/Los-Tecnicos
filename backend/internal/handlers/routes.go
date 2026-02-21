@@ -19,6 +19,9 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/iot/transfer", HandleTransfer)
 	router.POST("/iot/transfer/stop", HandleTransferStop)
 
+	// Energy Metering → Token Minting (Public — called by Pi)
+	router.POST("/iot/energy/report", HandleEnergyReport)
+
 	// Group routes under /api/v1
 	v1 := router.Group("/api/v1")
 	{
@@ -36,6 +39,40 @@ func SetupRoutes(router *gin.Engine) {
 		publicAnalytics := v1.Group("/analytics")
 		{
 			publicAnalytics.GET("/dashboard", GetAnalyticsDashboard)
+		}
+
+		// ─── Public Ledger / Transparency ───
+		ledger := v1.Group("/ledger")
+		{
+			ledger.GET("/overview", GetLedgerOverview)
+			ledger.GET("/transactions", GetLedgerTransactions)
+			ledger.GET("/mints", GetLedgerMints)
+			ledger.GET("/burns", GetLedgerBurns)
+			ledger.GET("/carbon", GetCarbonLedger)
+			ledger.GET("/price-history", GetPriceHistory)
+		}
+
+		// ─── Public Token Supply ───
+		v1.GET("/tokens/supply", GetTokenSupply)
+
+		// ─── Public DePIN Stats ───
+		depin := v1.Group("/depin")
+		{
+			depin.POST("/register", HandleDePINRegister)
+			depin.POST("/heartbeat", HandleDePINHeartbeat)
+			depin.GET("/nodes", GetDePINNodes)
+			depin.GET("/stats", GetDePINStats)
+		}
+
+		// ─── Public DeFi ───
+		defi := v1.Group("/defi")
+		{
+			defi.POST("/pool/stake", HandleLPStake)
+			defi.POST("/pool/unstake", HandleLPUnstake)
+			defi.GET("/pool/stats", GetPoolStats)
+			defi.POST("/flash-loan", HandleFlashLoan)
+			defi.POST("/flash-loan/repay", HandleFlashLoanRepay)
+			defi.GET("/yield/history", GetYieldHistory)
 		}
 
 		// Protected routes

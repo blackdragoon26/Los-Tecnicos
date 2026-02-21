@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = 'https://los-tecnicos-backend.onrender.com/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
 const ROOT_URL = API_BASE.replace('/api/v1', '');
 const DEVICE_ID = 'rpi-4b-prod-01';
 

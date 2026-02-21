@@ -35,15 +35,13 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 	database.DB.Where("type = ? AND status = ?", "buy", "Created").Order("token_price desc").Find(&openBuyOrders)
 
 	if len(openSellOrders) == 0 || len(openBuyOrders) == 0 {
-		return // Nothing to match
+		return // Nothing to match — silent
 	}
 
 	// Calculate Market Variables for Dynamic Pricing
 	supplyVol := float64(len(openSellOrders))
 	demandVol := float64(len(openBuyOrders))
 	socAvg := GetCommunitySoC()
-
-	log.Printf("Market State: Supply=%f, Demand=%f, SoC_avg=%f", supplyVol, demandVol, socAvg)
 
 	// Simple matching logic: Iterate through sell orders and find a matching buy order
 	for _, sellOrder := range openSellOrders {
@@ -140,6 +138,47 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 							// Don't fail the trade for yield error, just log it
 						}
 						log.Printf(">>> DEFI: Persisted Yield Record of %.6f XLM for User %s", yieldAmount, sellOrder.UserID)
+
+						// --- TOKEN BURN: Consumed energy → tokens destroyed ---
+						tokensBurned := buyOrder.KwhAmount * 1000 // 1 kWh = 1000 LT
+						burnRecord := domain.TokenBurn{
+							OrderID:      buyOrder.ID,
+							TokensBurned: tokensBurned,
+							BurnReason:   "trade_settlement",
+							TxHash:       "burn_" + time.Now().Format("20060102_150405"),
+							Timestamp:    time.Now(),
+						}
+						if err := tx.Create(&burnRecord).Error; err != nil {
+							log.Printf("Failed to persist burn: %v", err)
+						}
+						log.Printf(">>> BURN: 🔥 %.0f LT tokens burned (%.4f kWh consumed by %s)", tokensBurned, buyOrder.KwhAmount, buyOrder.UserID)
+
+						// --- TRADE FEE → LP STAKERS (2.5% commission) ---
+						tradeFee := buyOrder.KwhAmount * dynamicPrice * 0.025
+						lpYield := domain.YieldRecord{
+							UserID:    "liquidity_pool",
+							Amount:    tradeFee,
+							Source:    "Trade_Commission_2.5pct",
+							Timestamp: time.Now(),
+						}
+						if err := tx.Create(&lpYield).Error; err != nil {
+							log.Printf("Failed to persist LP yield: %v", err)
+						}
+						log.Printf(">>> REVENUE: 💰 %.4f XLM trade fee → LP pool", tradeFee)
+
+						// --- CARBON CREDIT from trade ---
+						co2Saved := buyOrder.KwhAmount * 0.82 // India grid emission factor
+						carbonCredit := domain.CarbonCredit{
+							DeviceID:    "marketplace",
+							KwhOffset:   buyOrder.KwhAmount,
+							CO2SavedKg:  co2Saved,
+							CreditValue: co2Saved * 0.05,
+							Timestamp:   time.Now(),
+						}
+						if err := tx.Create(&carbonCredit).Error; err != nil {
+							log.Printf("Failed to persist carbon credit: %v", err)
+						}
+						log.Printf(">>> CARBON: 🌱 %.3f kg CO₂ saved from %.4f kWh P2P trade", co2Saved, buyOrder.KwhAmount)
 						// ----------------------------------------
 
 						return nil
