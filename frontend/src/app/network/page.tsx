@@ -6,28 +6,47 @@ import { Globe, MapPin, Activity, Zap, Cpu } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://los-tecnicos-backend.onrender.com/api/v1';
+const BUILD_TIME = new Date().toISOString(); // Captured at build time
 
 export default function NetworkMap() {
     const [stats, setStats] = useState<any>(null);
     const [nodes, setNodes] = useState<any[]>([]);
+    const [debugInfo, setDebugInfo] = useState<any>({});
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const ROOT_URL = API_BASE.replace('/api/v1', '');
+                const dashboardUrl = `${API_BASE}/analytics/dashboard`;
+                const nodesUrl = `${ROOT_URL}/iot/nodes/rpi-4b-prod-01`;
+
                 const [dashboardRes, nodesRes] = await Promise.all([
-                    analyticsApi.getDashboard().catch(() => ({ data: {} })),
-                    fetch(`${ROOT_URL}/iot/nodes/rpi-4b-prod-01`)
-                        .then(r => r.ok ? r.json() : null)
-                        .catch(() => null)
+                    analyticsApi.getDashboard().catch((e) => ({ data: {}, error: String(e) })),
+                    fetch(nodesUrl)
+                        .then(r => r.ok ? r.json() : { error: `HTTP ${r.status}` })
+                        .catch((e) => ({ error: String(e) }))
                 ]);
-                setStats(dashboardRes.data);
+
+                const dashData = dashboardRes.data || dashboardRes;
+                setStats(dashData);
 
                 if (nodesRes && nodesRes.nodes) {
                     setNodes(nodesRes.nodes);
                 }
+
+                setDebugInfo({
+                    api_base: API_BASE,
+                    env_var: process.env.NEXT_PUBLIC_API_BASE_URL || '(not set — using fallback)',
+                    dashboard_url: dashboardUrl,
+                    nodes_url: nodesUrl,
+                    dashboard_response: dashData,
+                    nodes_response: nodesRes,
+                    build_time: BUILD_TIME,
+                    fetch_time: new Date().toISOString(),
+                });
             } catch (error) {
                 console.error("Failed to fetch network data", error);
+                setDebugInfo({ error: String(error), api_base: API_BASE });
             }
         };
         fetchData();
@@ -36,8 +55,8 @@ export default function NetworkMap() {
     }, []);
 
     const networkStats = [
-        { label: 'Active Devices', value: stats?.total_iot_devices || '0', icon: Cpu },
-        { label: 'Network Nodes', value: stats?.total_network_nodes || '0', icon: Activity },
+        { label: 'Active Devices', value: stats?.total_iot_devices ?? '0', icon: Cpu },
+        { label: 'Network Nodes', value: stats?.total_network_nodes ?? '0', icon: Activity },
         { label: 'Energy Traded', value: stats?.total_energy_traded ? `${stats.total_energy_traded.toFixed(2)} kWh` : '0 kWh', icon: Zap },
     ];
 
@@ -51,10 +70,18 @@ export default function NetworkMap() {
     return (
         <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <header className="mb-12">
+                <header className="mb-6">
                     <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-100">Network Status</h1>
                     <p className="mt-2 text-lg text-neutral-400">An overview of our global community mesh.</p>
                 </header>
+
+                {/* DEBUG PANEL — remove after fixing */}
+                <details className="mb-6 bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
+                    <summary className="text-yellow-400 font-bold cursor-pointer text-sm">🔍 Debug Info (click to expand)</summary>
+                    <pre className="mt-3 text-xs text-yellow-200/80 overflow-x-auto whitespace-pre-wrap bg-black/30 rounded p-3">
+                        {JSON.stringify(debugInfo, null, 2)}
+                    </pre>
+                </details>
 
                 {/* Stats Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
