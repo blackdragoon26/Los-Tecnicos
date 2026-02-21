@@ -36,9 +36,11 @@ func HandleGetNodes(c *gin.Context) {
 		return
 	}
 
-	// Get node details from last ping
+	// Only return nodes that have been updated within the last 2 minutes (Pi is actively pinging)
+	staleThreshold := time.Now().Add(-2 * time.Minute)
+
 	var nodes []domain.NodeDetail
-	database.DB.Where("device_id = ?", deviceID).Find(&nodes)
+	database.DB.Where("device_id = ? AND updated_at > ?", deviceID, staleThreshold).Find(&nodes)
 
 	// Get current schedule commands
 	var commands []domain.ScheduleCommand
