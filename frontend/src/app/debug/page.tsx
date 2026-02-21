@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://los-tecnicos-backend.onrender.com/api/v1';
+const ROOT_URL = API_BASE.replace('/api/v1', '');
 const DEVICE_ID = 'rpi-4b-prod-01';
 
 interface NodeInfo {
@@ -31,7 +32,7 @@ export default function DebugTransferPage() {
     // Fetch nodes
     const fetchNodes = useCallback(async () => {
         try {
-            const res = await fetch(`${API_BASE}/iot/nodes/${DEVICE_ID}`);
+            const res = await fetch(`${ROOT_URL}/iot/nodes/${DEVICE_ID}`);
             const data = await res.json();
             setNodes(data.nodes || []);
             setApiStatus('connected');
@@ -50,7 +51,7 @@ export default function DebugTransferPage() {
 
     // SSE for live events
     useEffect(() => {
-        const es = new EventSource(`${API_BASE}/iot/events`);
+        const es = new EventSource(`${ROOT_URL}/iot/events`);
         es.onopen = () => setSseStatus('connected');
         es.onerror = () => setSseStatus('error');
         es.onmessage = (e) => {
@@ -89,7 +90,7 @@ export default function DebugTransferPage() {
         }
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/iot/transfer`, {
+            const res = await fetch(`${ROOT_URL}/iot/transfer`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ device_id: DEVICE_ID, sender_uid: sender, receiver_uid: receiver }),
@@ -107,7 +108,7 @@ export default function DebugTransferPage() {
     const stopTransfer = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/iot/transfer/stop`, {
+            const res = await fetch(`${ROOT_URL}/iot/transfer/stop`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ device_id: DEVICE_ID }),
@@ -208,7 +209,7 @@ export default function DebugTransferPage() {
                                         {statusDot(sseStatus)}
                                         <span className="text-gray-300 font-medium">SSE Event Stream</span>
                                     </div>
-                                    <p className="text-gray-500 text-xs font-mono">{API_BASE}/iot/events</p>
+                                    <p className="text-gray-500 text-xs font-mono">{ROOT_URL}/iot/events</p>
                                     <p className="text-gray-500 text-xs mt-1">
                                         {sseStatus === 'connected' ? '✅ Listening for events' : sseStatus === 'error' ? '❌ Disconnected — will retry' : '⏳ Connecting...'}
                                     </p>
@@ -269,7 +270,7 @@ export default function DebugTransferPage() {
                         <div className="border-t border-gray-700 pt-6 mt-6">
                             <h4 className="text-sm font-semibold text-gray-300 mb-3">Quick Test (curl)</h4>
                             <div className="bg-gray-900 rounded p-3 overflow-x-auto">
-                                <code className="text-xs text-green-400 whitespace-pre">{`curl -X POST ${API_BASE}/iot/ping \\
+                                <code className="text-xs text-green-400 whitespace-pre">{`curl -X POST ${ROOT_URL}/iot/ping \\
   -H "Content-Type: application/json" \\
   -d '{"device_id":"${DEVICE_ID}","voltage":4.019,"connected_nodes_count":2,"connected_nodes":[{"uid":"NODE_A","voltage":4.019},{"uid":"NODE_B","voltage":3.739}],"battery_level":81.9,"state":"IDLE","timestamp":"2026-02-21T10:00:00.000Z","source":"rpi_energy_grid","nodes_detail":[{"uid":"NODE_A","ip":"10.42.0.76","voltage":4.019,"soc":81.9,"state":"IDLE"},{"uid":"NODE_B","ip":"10.42.0.204","voltage":3.739,"soc":40.9,"state":"IDLE"}]}'`}</code>
                             </div>

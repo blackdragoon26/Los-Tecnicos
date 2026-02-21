@@ -14,9 +14,10 @@ export default function NetworkMap() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                const ROOT_URL = API_BASE.replace('/api/v1', '');
                 const [dashboardRes, nodesRes] = await Promise.all([
                     analyticsApi.getDashboard().catch(() => ({ data: {} })),
-                    fetch(`${API_BASE}/iot/nodes/rpi-4b-prod-01`)
+                    fetch(`${ROOT_URL}/iot/nodes/rpi-4b-prod-01`)
                         .then(r => r.ok ? r.json() : null)
                         .catch(() => null)
                 ]);
