@@ -1,22 +1,52 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Globe, MapPin, Activity, Zap, Cpu } from 'lucide-react';
+import { analyticsApi } from '@/lib/api';
 
-const networkStats = [
-    { label: 'Active Nodes', value: '2,401', icon: Cpu },
-    { label: 'Data Relayed', value: '1.2 PB', icon: Activity },
-    { label: 'Mesh Health', value: '98.4%', icon: Zap },
-];
-
-const topNodes = [
-    { name: 'BERLIN-MESH-04', location: 'Berlin, Germany', relayed: '14.2 GB', uptime: '99.9%' },
-    { name: 'SF-GRID-01', location: 'San Francisco, USA', relayed: '12.8 GB', uptime: '99.8%' },
-    { name: 'TOKYO-NODE-07', location: 'Tokyo, Japan', relayed: '11.5 GB', uptime: '99.7%' },
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://los-tecnicos-backend.onrender.com/api/v1';
 
 export default function NetworkMap() {
+    const [stats, setStats] = useState<any>(null);
+    const [nodes, setNodes] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [dashboardRes, nodesRes] = await Promise.all([
+                    analyticsApi.getDashboard().catch(() => ({ data: {} })),
+                    fetch(`${API_BASE}/iot/nodes/rpi-4b-prod-01`)
+                        .then(r => r.ok ? r.json() : null)
+                        .catch(() => null)
+                ]);
+                setStats(dashboardRes.data);
+
+                if (nodesRes && nodesRes.nodes) {
+                    setNodes(nodesRes.nodes);
+                }
+            } catch (error) {
+                console.error("Failed to fetch network data", error);
+            }
+        };
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const networkStats = [
+        { label: 'Active Devices', value: stats?.total_iot_devices || '0', icon: Cpu },
+        { label: 'Network Nodes', value: stats?.total_network_nodes || '0', icon: Activity },
+        { label: 'Energy Traded', value: stats?.total_energy_traded ? `${stats.total_energy_traded.toFixed(2)} kWh` : '0 kWh', icon: Zap },
+    ];
+
+    const topNodes = nodes.slice(0, 5).map((n: any) => ({
+        name: n.uid,
+        location: n.ip || 'Local Network',
+        relayed: `${n.voltage.toFixed(2)} V`,
+        uptime: `${n.soc.toFixed(1)}%`
+    }));
+
     return (
         <div className="min-h-screen text-neutral-100 pt-24 sm:pt-28">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,18 +97,21 @@ export default function NetworkMap() {
                         transition={{ duration: 0.5, delay: 0.2 }}
                         className="lg:col-span-4 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50"
                     >
-                        <h2 className="text-xl font-bold mb-6">Top Performing Nodes</h2>
+                        <h2 className="text-xl font-bold mb-6">Live Node States</h2>
                         <div className="space-y-4">
                             {topNodes.map((node) => (
                                 <div key={node.name} className="bg-neutral-700/50 p-4 rounded-lg">
                                     <p className="font-bold text-primary-DEFAULT">{node.name}</p>
                                     <p className="text-xs text-neutral-400 flex items-center gap-1.5 mt-1"><MapPin size={12} /> {node.location}</p>
                                     <div className="flex justify-between text-sm mt-3 text-neutral-300">
-                                        <span>Relayed: <span className="font-semibold">{node.relayed}</span></span>
-                                        <span>Uptime: <span className="font-semibold">{node.uptime}</span></span>
+                                        <span>Voltage: <span className="font-semibold">{node.relayed}</span></span>
+                                        <span>SoC: <span className="font-semibold">{node.uptime}</span></span>
                                     </div>
                                 </div>
                             ))}
+                            {topNodes.length === 0 && (
+                                <p className="text-neutral-500 text-sm">No live nodes found.</p>
+                            )}
                         </div>
                     </motion.div>
                 </div>
@@ -95,18 +128,18 @@ const WorldMap = () => (
                 fill="#1F2937"
             />
             {/* Some random points to simulate nodes */}
-            <MapPoint cx={400} cy={200} />
-            <MapPoint cx={150} cy={150} />
-            <MapPoint cx={650} cy={250} />
-            <MapPoint cx={300} cy={280} />
-            <MapPoint cx={500} cy={120} />
-            <MapPoint cx={250} cy={100} />
-            <MapPoint cx={580} cy={300} />
+            <MapPoint cx={400} cy={200} delay={0.2} />
+            <MapPoint cx={150} cy={150} delay={0.8} />
+            <MapPoint cx={650} cy={250} delay={1.2} />
+            <MapPoint cx={300} cy={280} delay={0.5} />
+            <MapPoint cx={500} cy={120} delay={1.0} />
+            <MapPoint cx={250} cy={100} delay={0.1} />
+            <MapPoint cx={580} cy={300} delay={1.4} />
         </svg>
     </div>
 );
 
-const MapPoint = ({ cx, cy }: { cx: number; cy: number }) => (
+const MapPoint = ({ cx, cy, delay }: { cx: number; cy: number; delay: number }) => (
     <g transform={`translate(${cx}, ${cy})`}>
         <circle cx="0" cy="0" r="3" fill="#3B82F6" />
         <circle cx="0" cy="0" r="6" fill="#3B82F6" fillOpacity="0.3">
@@ -115,7 +148,7 @@ const MapPoint = ({ cx, cy }: { cx: number; cy: number }) => (
                 from="3"
                 to="12"
                 dur="1.5s"
-                begin={`${Math.random() * 1.5}s`}
+                begin={`${delay}s`}
                 repeatCount="indefinite"
             />
             <animate
@@ -123,10 +156,9 @@ const MapPoint = ({ cx, cy }: { cx: number; cy: number }) => (
                 from="0.5"
                 to="0"
                 dur="1.5s"
-                begin={`${Math.random() * 1.5}s`}
+                begin={`${delay + 0.3}s`}
                 repeatCount="indefinite"
             />
         </circle>
     </g>
 );
-

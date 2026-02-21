@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://los-tecnicos-backend.onrender.com/api/v1';
 const DEVICE_ID = 'rpi-4b-prod-01';
 
 interface NodeInfo {
@@ -271,7 +271,7 @@ export default function DebugTransferPage() {
                             <div className="bg-gray-900 rounded p-3 overflow-x-auto">
                                 <code className="text-xs text-green-400 whitespace-pre">{`curl -X POST ${API_BASE}/iot/ping \\
   -H "Content-Type: application/json" \\
-  -d '{"device_id":"${DEVICE_ID}","voltage":4.019,"connected_nodes_count":2,"connected_nodes":[{"uid":"NODE_A","voltage":4.019},{"uid":"NODE_B","voltage":3.739}],"battery_level":81.9,"state":"IDLE","timestamp":"${new Date().toISOString()}","source":"rpi_energy_grid","nodes_detail":[{"uid":"NODE_A","ip":"10.42.0.76","voltage":4.019,"soc":81.9,"state":"IDLE"},{"uid":"NODE_B","ip":"10.42.0.204","voltage":3.739,"soc":40.9,"state":"IDLE"}]}'`}</code>
+  -d '{"device_id":"${DEVICE_ID}","voltage":4.019,"connected_nodes_count":2,"connected_nodes":[{"uid":"NODE_A","voltage":4.019},{"uid":"NODE_B","voltage":3.739}],"battery_level":81.9,"state":"IDLE","timestamp":"2026-02-21T10:00:00.000Z","source":"rpi_energy_grid","nodes_detail":[{"uid":"NODE_A","ip":"10.42.0.76","voltage":4.019,"soc":81.9,"state":"IDLE"},{"uid":"NODE_B","ip":"10.42.0.204","voltage":3.739,"soc":40.9,"state":"IDLE"}]}'`}</code>
                             </div>
                             <p className="text-gray-500 text-xs mt-2">Run this command to simulate a Pi ping and populate node data</p>
                         </div>
@@ -283,8 +283,8 @@ export default function DebugTransferPage() {
                             <div
                                 key={node.uid}
                                 className={`bg-gray-800/60 border rounded-lg p-4 backdrop-blur-sm transition-all ${sender === node.uid ? 'border-orange-500 ring-1 ring-orange-500/50' :
-                                        receiver === node.uid ? 'border-green-500 ring-1 ring-green-500/50' :
-                                            'border-gray-700'
+                                    receiver === node.uid ? 'border-green-500 ring-1 ring-green-500/50' :
+                                        'border-gray-700'
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-3">
@@ -324,8 +324,8 @@ export default function DebugTransferPage() {
                                     <button
                                         onClick={() => setSender(node.uid)}
                                         className={`flex-1 text-xs py-1.5 rounded font-medium transition-all ${sender === node.uid
-                                                ? 'bg-orange-500 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-orange-500/20 hover:text-orange-300'
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-orange-500/20 hover:text-orange-300'
                                             }`}
                                     >
                                         {sender === node.uid ? '✓ Sender' : 'Set Sender'}
@@ -333,8 +333,8 @@ export default function DebugTransferPage() {
                                     <button
                                         onClick={() => setReceiver(node.uid)}
                                         className={`flex-1 text-xs py-1.5 rounded font-medium transition-all ${receiver === node.uid
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-green-500/20 hover:text-green-300'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-green-500/20 hover:text-green-300'
                                             }`}
                                     >
                                         {receiver === node.uid ? '✓ Receiver' : 'Set Receiver'}

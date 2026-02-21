@@ -32,6 +32,12 @@ func SetupRoutes(router *gin.Engine) {
 			auth.GET("/me", AuthMiddleware(), Me)
 		}
 
+		// Public analytics routes
+		publicAnalytics := v1.Group("/analytics")
+		{
+			publicAnalytics.GET("/dashboard", GetAnalyticsDashboard)
+		}
+
 		// Protected routes
 		protected := v1.Group("/")
 		protected.Use(AuthMiddleware())
@@ -60,10 +66,9 @@ func SetupRoutes(router *gin.Engine) {
 				network.POST("/node/register", RegisterNode)
 			}
 
-			// Analytics routes
+			// Analytics routes (Protected)
 			analytics := protected.Group("/analytics")
 			{
-				analytics.GET("/dashboard", GetAnalyticsDashboard)
 				analytics.GET("/transactions", GetUserTransactions)
 			}
 		}

@@ -30,18 +30,21 @@ export default function Dashboard() {
     const [activeRole, setActiveRole] = useState('Donor');
     const { user, setDevices } = useStore();
     const [stats, setStats] = useState<any>(null);
+    const [transactions, setTransactions] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!user) return; // Don't fetch if no user
 
             try {
-                const [statsRes, devicesRes] = await Promise.all([
+                const [statsRes, devicesRes, txRes] = await Promise.all([
                     analyticsApi.getDashboard(),
-                    iotApi.getDevices()
+                    iotApi.getDevices(),
+                    analyticsApi.getTransactions().catch(() => ({ data: [] }))
                 ]);
                 setStats(statsRes.data);
                 setDevices(devicesRes.data);
+                setTransactions(txRes.data || []);
             } catch (error) {
                 console.error("Failed to fetch dashboard data:", error);
             }
@@ -83,7 +86,7 @@ export default function Dashboard() {
                 </header>
 
                 <AnimatePresence mode="wait">
-                    {activeRole === 'Donor' && <DonorView key="donor" stats={stats} />}
+                    {activeRole === 'Donor' && <DonorView key="donor" stats={stats} transactions={transactions} />}
                     {activeRole === 'Recipient' && <RecipientView key="recipient" stats={stats} />}
                     {activeRole === 'Operator' && <OperatorView key="operator" stats={stats} />}
                 </AnimatePresence>
@@ -108,7 +111,7 @@ function MetricCard({ label, value, icon: Icon, colorClass }: any) {
     );
 }
 
-function DonorView({ stats }: any) {
+function DonorView({ stats, transactions }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -185,24 +188,28 @@ function DonorView({ stats }: any) {
             <div className="lg:col-span-4 space-y-6">
                 <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
                     <h3 className="font-bold mb-6 flex items-center gap-2"><History size={18} /> Recent Transactions</h3>
-                    <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
-                                        <ArrowUpRight size={20} />
+                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+                        {transactions && transactions.length > 0 ? (
+                            transactions.slice(0, 10).map((tx: any) => (
+                                <div key={tx.id} className="flex items-center justify-between text-sm py-2 border-b border-neutral-700/50 last:border-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
+                                            {tx.type === 'buy' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold">{tx.type === 'buy' ? 'Bought' : 'Sold'} {tx.kwh_amount} kWh</p>
+                                            <p className="text-xs text-neutral-400 font-mono" title={tx.id}>ID: ...{tx.id.slice(-6)}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-bold">Sold 12.5 kWh</p>
-                                        <p className="text-xs text-neutral-400">To: GDC...8K2</p>
+                                    <div className="text-right">
+                                        <p className="font-bold text-green-400">{tx.type === 'buy' ? '-' : '+'}{tx.token_amount.toFixed(2)} XLM</p>
+                                        <p className="text-xs text-neutral-500">{new Date(tx.timestamp).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-green-400">+8.4 XLM</p>
-                                    <p className="text-xs text-neutral-500">2h ago</p>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-neutral-500 text-sm">No recent transactions found.</p>
+                        )}
                     </div>
                 </div>
 
