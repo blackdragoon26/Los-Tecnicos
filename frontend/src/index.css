@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 12% 18%;
+    --foreground: 60 6% 90%;
+    --card: 220 10% 22%;
+    --card-foreground: 60 6% 90%;
+    --popover: 220 10% 20%;
+    --popover-foreground: 60 6% 90%;
+    --primary: 75 38% 42%;
+    --primary-foreground: 220 12% 10%;
+    --secondary: 220 8% 26%;
+    --secondary-foreground: 60 6% 85%;
+    --muted: 220 8% 26%;
+    --muted-foreground: 220 6% 55%;
+    --accent: 75 30% 50%;
+    --accent-foreground: 220 12% 10%;
+    --destructive: 0 50% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 8% 28%;
+    --input: 220 8% 28%;
+    --ring: 75 38% 42%;
+    --radius: 0.5rem;
+    --olive: 75 38% 42%;
+    --olive-light: 75 30% 55%;
+    --olive-muted: 75 15% 30%;
+    --slate-deep: 220 12% 14%;
+    --sidebar-background: 220 12% 16%;
+    --sidebar-foreground: 60 6% 90%;
+    --sidebar-primary: 75 38% 42%;
+    --sidebar-primary-foreground: 220 12% 10%;
+    --sidebar-accent: 220 8% 26%;
+    --sidebar-accent-foreground: 60 6% 90%;
+    --sidebar-border: 220 8% 28%;
+    --sidebar-ring: 75 38% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
+  code, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Subtle grain texture overlay */
+.grain::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Nav link redaction hover effect */
+.nav-redact {
+  position: relative;
+  overflow: hidden;
+}
+.nav-redact::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    92deg,
+    hsl(var(--primary) / 0.85) 0%,
+    hsl(var(--primary) / 0.95) 25%,
+    hsl(var(--primary) / 0.7) 50%,
+    hsl(var(--primary) / 0.9) 75%,
+    hsl(var(--primary) / 0.8) 100%
+  );
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+.nav-redact:hover::after {
+  transform: scaleX(1);
+}
+.nav-redact:hover {
+  color: hsl(var(--primary-foreground));
+  text-shadow: 0 0 1px hsl(var(--primary-foreground) / 0.5);
+}
+
+/* Redacted / Classified text effect */
+.redacted {
+  background: linear-gradient(
+    92deg,
+    hsl(var(--foreground) / 0.85) 0%,
+    hsl(var(--foreground) / 0.95) 20%,
+    hsl(var(--foreground) / 0.7) 45%,
+    hsl(var(--foreground) / 0.92) 60%,
+    hsl(var(--foreground) / 0.75) 80%,
+    hsl(var(--foreground) / 0.88) 100%
+  );
+  color: transparent;
+  user-select: none;
+  display: inline-block;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.15);
+}
+
+/* Scanline overlay */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(var(--foreground) / 0.015) 2px,
+    hsl(var(--foreground) / 0.015) 4px
+  );
+  z-index: 1;
+}
+
+/* Glitch flicker */
+@keyframes flicker {
+  0%, 97%, 100% { opacity: 1; }
+  98% { opacity: 0.7; }
+  99% { opacity: 0.9; }
+}
+
+.flicker {
+  animation: flicker 4s infinite;
+}
+
+/* Stamp rotate */
+@keyframes stamp-in {
+  from { transform: rotate(-12deg) scale(1.3); opacity: 0; }
+  to { transform: rotate(-6deg) scale(1); opacity: 1; }
+}
+
+.stamp {
+  animation: stamp-in 0.4s ease-out forwards;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
