@@ -600,10 +600,9 @@ func GetMarketPrice(c *gin.Context) {
 		basePrice = 0.50 // Default base price
 	}
 
-	// Calculate Dynamic Price
-	// We create dummy orders for calculation
+	// Calculate Dynamic Price using current market conditions
 	dummyBuy := domain.EnergyOrder{}
-	dummySell := domain.EnergyOrder{UserID: "user_a", TokenPrice: basePrice} // Use 'user_a' from simulation for quality variance
+	dummySell := domain.EnergyOrder{TokenPrice: basePrice} // No hardcoded user — quality factor uses real device data
 
 	pe := pricing.NewPricingEngine()
 	pe.Config.BasePrice = basePrice

@@ -88,7 +88,7 @@ export default function NetworkMap() {
                         transition={{ duration: 0.5 }}
                         className="lg:col-span-8 bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50 h-96 lg:h-auto flex items-center justify-center"
                     >
-                        <WorldMap />
+                        <WorldMap nodes={nodes} />
                     </motion.div>
 
                     {/* Top Nodes List */}
@@ -111,7 +111,10 @@ export default function NetworkMap() {
                                 </div>
                             ))}
                             {topNodes.length === 0 && (
-                                <p className="text-neutral-500 text-sm">No live nodes found.</p>
+                                <div className="text-center py-4">
+                                    <p className="text-neutral-500 text-sm">No live nodes found.</p>
+                                    <p className="text-neutral-600 text-xs mt-1">Nodes appear when the Pi sends data via /iot/ping</p>
+                                </div>
                             )}
                         </div>
                     </motion.div>
@@ -121,22 +124,30 @@ export default function NetworkMap() {
     );
 }
 
-const WorldMap = () => (
-    <div className="w-full h-full relative">
-        <svg viewBox="0 0 800 400" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            <path
-                d="M400,0 C179.086,0 0,100.422 0,200 C0,299.578 179.086,400 400,400 C620.914,400 800,299.578 800,200 C800,100.422 620.914,0 400,0 Z"
-                fill="#1F2937"
-            />
-            {/* Some random points to simulate nodes */}
-            <MapPoint cx={400} cy={200} delay={0.2} />
-            <MapPoint cx={150} cy={150} delay={0.8} />
-            <MapPoint cx={650} cy={250} delay={1.2} />
-            <MapPoint cx={300} cy={280} delay={0.5} />
-            <MapPoint cx={500} cy={120} delay={1.0} />
-            <MapPoint cx={250} cy={100} delay={0.1} />
-            <MapPoint cx={580} cy={300} delay={1.4} />
-        </svg>
+const WorldMap = ({ nodes }: { nodes: any[] }) => (
+    <div className="w-full h-full relative flex items-center justify-center">
+        {nodes.length === 0 ? (
+            <div className="text-center">
+                <Globe size={48} className="text-neutral-600 mx-auto mb-3" />
+                <p className="text-neutral-500 text-sm">No nodes connected yet</p>
+                <p className="text-neutral-600 text-xs mt-1">Waiting for Raspberry Pi data...</p>
+            </div>
+        ) : (
+            <svg viewBox="0 0 800 400" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                <path
+                    d="M400,0 C179.086,0 0,100.422 0,200 C0,299.578 179.086,400 400,400 C620.914,400 800,299.578 800,200 C800,100.422 620.914,0 400,0 Z"
+                    fill="#1F2937"
+                />
+                {nodes.map((node, i) => (
+                    <MapPoint
+                        key={node.uid}
+                        cx={200 + i * 200}
+                        cy={150 + (i % 2) * 100}
+                        delay={i * 0.3}
+                    />
+                ))}
+            </svg>
+        )}
     </div>
 );
 

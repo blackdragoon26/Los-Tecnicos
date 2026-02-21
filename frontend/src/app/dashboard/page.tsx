@@ -124,7 +124,7 @@ function DonorView({ stats, transactions }: any) {
                     <MetricCard icon={BatteryCharging} label="Grid Capacity" value={stats?.total_energy_traded ? `${stats.total_energy_traded} kWh` : '0.0 kWh'} colorClass="bg-green-500/10 text-green-400" />
                     <MetricCard icon={Users} label="Network Users" value={stats?.total_users || '0'} colorClass="bg-blue-500/10 text-blue-400" />
                     <MetricCard icon={Activity} label="Active Orders" value={stats?.active_orders || '0'} colorClass="bg-orange-500/10 text-orange-400" />
-                    <MetricCard icon={TrendingUp} label="Staking Yield" value="+ 4.2 XLM" colorClass="bg-purple-500/10 text-purple-400" />
+                    <MetricCard icon={TrendingUp} label="Staking Yield" value={stats?.staking_yield ? `+ ${stats.staking_yield} XLM` : '—'} colorClass="bg-purple-500/10 text-purple-400" />
                 </div>
 
                 <div className="bg-neutral-800 p-8 rounded-2xl border border-neutral-700/50 flex flex-col md:flex-row items-center gap-8">
@@ -154,33 +154,12 @@ function DonorView({ stats, transactions }: any) {
                 {/* Governance Section */}
                 <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold flex items-center gap-2 text-xl"><Globe size={20} /> Active Governance Proposals</h3>
-                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">DAO Live</span>
+                        <h3 className="font-bold flex items-center gap-2 text-xl"><Globe size={20} /> Governance</h3>
+                        <span className="text-xs bg-neutral-600/20 text-neutral-400 px-2 py-1 rounded-full border border-neutral-600/30">DAO</span>
                     </div>
-                    <div className="space-y-4">
-                        <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-700/30">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h4 className="font-bold text-neutral-200">Proposal #42: Lower Distance Penalty (Gamma)</h4>
-                                    <p className="text-sm text-neutral-400 mt-1">Reduce the network transmission fee/penalty for long-distance trades by 15% to encourage regional grid sharing.</p>
-                                </div>
-                                <div className="text-right ml-4">
-                                    <span className="text-xs font-mono text-neutral-500">Ends in 2d 4h</span>
-                                </div>
-                            </div>
-                            <div className="mt-4 flex items-center justify-between">
-                                <div className="flex-1 mr-4">
-                                    <div className="h-2 bg-neutral-700 rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary-DEFAULT w-[65%]"></div>
-                                    </div>
-                                    <div className="flex justify-between text-xs mt-1 text-neutral-400">
-                                        <span>Yes: 65%</span>
-                                        <span>No: 35%</span>
-                                    </div>
-                                </div>
-                                <button className="bg-white text-black hover:bg-neutral-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Vote</button>
-                            </div>
-                        </div>
+                    <div className="text-center py-6">
+                        <p className="text-neutral-500 text-sm">No active proposals</p>
+                        <p className="text-neutral-600 text-xs mt-1">Proposals will appear here when submitted on-chain</p>
                     </div>
                 </div>
             </div>
@@ -214,16 +193,16 @@ function DonorView({ stats, transactions }: any) {
                 </div>
 
                 <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 p-6 rounded-2xl border border-purple-500/30">
-                    <h3 className="font-bold mb-2 flex items-center gap-2 text-purple-200"><TrendingUp size={18} /> DeFi Yield Active</h3>
-                    <p className="text-sm text-purple-300/80 mb-4">Your idle orders are currently staked in a Stellar Liquidity Pool.</p>
+                    <h3 className="font-bold mb-2 flex items-center gap-2 text-purple-200"><TrendingUp size={18} /> DeFi Yield</h3>
+                    <p className="text-sm text-purple-300/80 mb-4">Stake idle tokens in the Liquidity Pool to earn yield.</p>
                     <div className="flex items-end justify-between">
                         <div>
                             <p className="text-xs text-purple-300">Total Earned</p>
-                            <p className="text-2xl font-bold text-white">4.20 XLM</p>
+                            <p className="text-2xl font-bold text-white">—</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-xs text-purple-300">Current APY</p>
-                            <p className="text-xl font-bold text-green-400">5.2%</p>
+                            <p className="text-xs text-purple-300">Base APY</p>
+                            <p className="text-xl font-bold text-green-400">8.5%</p>
                         </div>
                     </div>
                 </div>
