@@ -485,7 +485,9 @@ func GetAnalyticsDashboard(c *gin.Context) {
 		errChan <- database.DB.Model(&domain.User{}).Count(&stats.TotalUsers).Error
 	}()
 	go func() {
-		errChan <- database.DB.Model(&domain.IoTDevice{}).Count(&stats.TotalIoTDevices).Error
+		// Only count devices that have pinged within the last 2 minutes (actually online)
+		staleThreshold := time.Now().Add(-2 * time.Minute)
+		errChan <- database.DB.Model(&domain.IoTDevice{}).Where("last_ping > ?", staleThreshold).Count(&stats.TotalIoTDevices).Error
 	}()
 	go func() {
 		errChan <- database.DB.Model(&domain.NetworkNode{}).Count(&stats.TotalNetworkNodes).Error
