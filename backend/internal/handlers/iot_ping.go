@@ -426,5 +426,26 @@ func HandleIoTPing(c *gin.Context) {
 
 	IoTBroker.Broadcast <- event
 
-	c.JSON(http.StatusOK, gin.H{"status": "received", "type": "node_data", "updated": true})
+	// ── Include schedule commands in the response so Pi picks them up ──
+	var activeCommands []domain.ScheduleCommand
+	database.DB.Where("device_id = ? AND action IN ?", payload.DeviceID, []string{"discharge", "charge"}).Find(&activeCommands)
+
+	commands := []gin.H{}
+	for _, cmd := range activeCommands {
+		commands = append(commands, gin.H{
+			"node_id": cmd.NodeUID,
+			"action":  cmd.Action,
+		})
+	}
+
+	if len(commands) > 0 {
+		log.Printf("[IoT-PING] 📤 Sending %d command(s) to %s: %v", len(commands), payload.DeviceID, commands)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   "received",
+		"type":     "node_data",
+		"updated":  true,
+		"commands": commands,
+	})
 }
