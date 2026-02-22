@@ -20,6 +20,7 @@ import Onboarding from "@/pages/Onboarding";
 import DebugTransfer from "@/pages/DebugTransfer";
 import About from "@/pages/About";
 import NotFound from "@/pages/NotFound";
+import RegisterDevice from "@/pages/RegisterDevice";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,10 @@ const App = () => (
             <Route
               path="/dashboard"
               element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+            />
+            <Route
+              path="/register-node"
+              element={<ProtectedRoute><RegisterDevice /></ProtectedRoute>}
             />
             <Route
               path="/marketplace"

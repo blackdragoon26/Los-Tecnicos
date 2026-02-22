@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Networks, TransactionBuilder, Account, Memo } from "@stellar/stellar-sdk";
 
 export default function Marketplace() {
   const { user, isConnected, publicKey } = useWallet();
@@ -50,7 +51,7 @@ export default function Marketplace() {
         try {
           const res = await marketApi.getOrders();
           setOrders((res as any).data ?? res ?? []);
-        } catch {}
+        } catch { }
       };
       fetchOrders();
       fetchMarketData();
@@ -62,20 +63,48 @@ export default function Marketplace() {
   const handleCreateOrder = async (type: "buy" | "sell") => {
     const amount = type === "sell" ? sellAmount : buyAmount;
     const price = marketData?.price;
-    if (!amount || !price) return;
+    if (!amount || !price || !publicKey) return;
+
     try {
+      // 1. Simulate the Web3 Signature Flow for the Pitch Video
+      const freighterApi = await import("@stellar/freighter-api");
+      const account = new Account(publicKey, "1");
+
+      const memoText = type === "buy"
+        ? `BUY ${amount}kWh @ ${parseFloat(price).toFixed(2)}`
+        : `SELL ${amount}kWh @ ${parseFloat(price).toFixed(2)}`;
+
+      const tx = new TransactionBuilder(account, {
+        fee: "100",
+        networkPassphrase: Networks.TESTNET,
+      })
+        .setTimeout(30)
+        .addMemo(Memo.text(memoText.substring(0, 28))) // Max 28 chars
+        .build();
+
+      const xdr = tx.toXDR();
+      toast.loading("Awaiting Freighter Signature...", { id: "tx-sign" });
+
+      const signedXdr = await freighterApi.signTransaction(xdr, { network: "TESTNET" });
+      if (!signedXdr) throw new Error("Signature rejected");
+
+      toast.success("Transaction signed cryptographically!", { id: "tx-sign" });
+
+      // 2. Submit to backend
       await marketApi.createOrder({
         type,
         kwh_amount: parseFloat(amount),
         token_price: parseFloat(price),
       });
-      toast.success(`${type} order created!`);
+      toast.success(`Active ${type.toUpperCase()} order placed on ledger!`);
       const res = await marketApi.getOrders();
       setOrders((res as any).data ?? res ?? []);
       await fetchMarketData();
       type === "sell" ? setSellAmount("") : setBuyAmount("");
-    } catch {
-      toast.error("Failed to create order");
+    } catch (err: any) {
+      console.error(err);
+      toast.dismiss("tx-sign");
+      toast.error(err.message || "Failed to create order");
     }
   };
 

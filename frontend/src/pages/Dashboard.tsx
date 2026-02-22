@@ -52,9 +52,10 @@ function DonorView({ stats, transactions }: { stats: any; transactions: any[] })
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Link to="/marketplace"><Button size="sm" className="text-xs h-8">Mint Tokens</Button></Link>
                 <Link to="/marketplace"><Button size="sm" variant="outline" className="text-xs h-8">Create Order</Button></Link>
+                <Link to="/register-node"><Button size="sm" variant="secondary" className="text-xs h-8">Link Hardware</Button></Link>
               </div>
             </CardContent>
           </Card>
@@ -243,7 +244,7 @@ export default function Dashboard() {
         ]);
         setStats(statsRes.data ?? statsRes);
         setTransactions((txRes as any).data ?? txRes ?? []);
-      } catch {}
+      } catch { }
     };
     fetchData();
   }, [user]);
@@ -323,7 +324,7 @@ export default function Dashboard() {
 function AdminPanel() {
   const [data, setData] = useState<any>(null);
   useEffect(() => {
-    analyticsApi.getDashboard().then((d) => setData(d)).catch(() => {});
+    analyticsApi.getDashboard().then((d) => setData(d)).catch(() => { });
   }, []);
 
   return (
