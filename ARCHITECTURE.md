@@ -211,7 +211,7 @@ Example: Stake 1000 LT for 48 hours at 8.5% APY
 | **Hardware** | Raspberry Pi 4B, Li-ion batteries, relay circuits | SoC sensors, current sensors, voltage ADC |
 | **Backend** | Go, Gin, GORM, PostgreSQL | 44 API endpoints, scheduling, matching, pricing |
 | **Blockchain** | Stellar Soroban (Rust) | 4 smart contracts |
-| **Frontend** | Next.js, React, TailwindCSS | Dashboard, marketplace, debug, transparency |
+| **Frontend** | Vite, React, TailwindCSS, shadcn/ui | Dashboard, marketplace, debug, transparency |
 | **Hosting** | Render (backend), Vercel (frontend) | Auto-deploy on push |
 | **ZK** | Ristretto255 (Go) | Pedersen commitments, range proofs |
 | **DeFi** | LP + Flash Loans (Go + Soroban) | 8.5% APY, 0.3% flash fee |
@@ -365,3 +365,76 @@ Tree equivalent: 1 tree absorbs ~21.77 kg CO₂/year
 | Withdrawal Fee | **0.5%** + gas | Fiat off-ramp (DoDo) |
 
 **Break-even:** At 35 trades/day × 0.5 kWh × 5.5 XLM × 2.5% = **2.41 XLM/day** in commission alone.
+
+---
+
+## Hardware & Custom Protocol {#hardware-protocol}
+
+### Raspberry Pi ↔ ESP32 Command Translation
+The backend orchestrates transfers using the terms `discharge` and `charge`. However, the physical ESP32 nodes (`energy_firmware.ino`) do not understand these strings. They use a custom 8080 TCP Socket protocol.
+
+The python script on the Pi (`energy_grid_updated.py`) securely translates Internet API commands into Local Hardware commands:
+
+| Backend API Action | Transmitted over Local Network as | Physical Action Triggered |
+|--------------------|-----------------------------------|---------------------------|
+| `discharge`        | `SUPPLY`                          | Opens GPIO 26 (Relay 2 - Boost Converter) |
+| `charge`           | `RECEIVE`                         | Opens GPIO 25 (Relay 1 - TP4056 Charger)  |
+| *(none / idle)*    | `IDLE`                            | Closes all relays for safety |
+
+### Physical Wiring Diagram (The ESP32 End)
+For electricity to flow properly, nodes must be wired correctly. Relays **must** use the `COM` and `NO` (Normally Open) terminals. If `NC` (Normally Closed) is used, the logic is reversed and transfers will fail. Furthermore, the two nodes must share a Common Ground.
+
+```mermaid
+flowchart TD
+    %% Node A Components
+    subgraph "NODE A (Your ESP32 Setup)"
+        ESP[ESP32]
+        BATT[(18650 Battery)]
+        BOOST[5V Boost Converter]
+        TP4056[TP4056 Charger]
+        
+        subgraph "SUPPLY RELAY (GPIO 26)"
+            R_SUP_COM(COM)
+            R_SUP_NO(NO)
+        end
+        
+        subgraph "RECEIVE RELAY (GPIO 25)"
+            R_REC_COM(COM)
+            R_REC_NO(NO)
+        end
+    end
+
+    %% Node B (The Other Side)
+    subgraph "GRID WIRES (Connecting to Node B)"
+        GRID_POS((🔥 POSITIVE TRANSFER WIRE))
+        GRID_NEG((⚡ SHARED GROUND WIRE))
+    end
+
+    %% Control Signals
+    ESP -. "GPIO 26 Signal" .-> SUPPLY_RELAY
+    ESP -. "GPIO 25 Signal" .-> RECEIVE_RELAY
+
+    %% SUPPLY PATH (Discharging out to the grid)
+    BATT == "Battery +" ==> BOOST
+    BOOST == "5V Out +" ==> R_SUP_COM
+    R_SUP_NO == "Flows when Green LED is ON" ==> GRID_POS
+
+    %% RECEIVE PATH (Charging from the grid)
+    GRID_POS == "5V In +" ==> R_REC_NO
+    R_REC_COM == "Flows when Green LED is ON" ==> TP4056
+    TP4056 == "Charging +" ==> BATT
+
+    %% CRITICAL: SHARED GROUND NETWORK
+    BATT -- "Negative (-)" --> GRID_NEG
+    BOOST -- "Negative (-)" --> GRID_NEG
+    TP4056 -- "Negative (-)" --> GRID_NEG
+    ESP -- "GND" --> GRID_NEG
+
+    style GRID_POS fill:#ff4444,color:white,stroke-width:4px
+    style GRID_NEG fill:#444444,color:white,stroke-width:4px
+    style BATT fill:#2ca02c,color:white
+    style R_SUP_COM fill:#0e6cc4,color:white
+    style R_SUP_NO fill:#0e6cc4,color:white
+    style R_REC_COM fill:#0e6cc4,color:white
+    style R_REC_NO fill:#0e6cc4,color:white
+```
