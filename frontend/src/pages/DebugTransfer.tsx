@@ -60,7 +60,7 @@ export default function DebugTransfer() {
         if (data.type === "transfer") {
           const p = data.payload;
           if (p.status === "started") {
-            setEvents((prev) => [`[${ts}] ⚡ Transfer: ${p.sender_uid} → ${p.receiver_uid}`, ...prev.slice(0, 29)]);
+            setEvents((prev) => [`[${ts}] Transfer: ${p.sender_uid} → ${p.receiver_uid}`, ...prev.slice(0, 29)]);
           } else if (p.status === "stopped") {
             setEvents((prev) => [`[${ts}] 🛑 All transfers stopped`, ...prev.slice(0, 29)]);
           }
@@ -136,7 +136,7 @@ export default function DebugTransfer() {
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-5xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">⚡ Energy Transfer Debug</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Energy Transfer Debug</h1>
           <p className="text-muted-foreground text-sm">
             Control energy transfers between nodes on <code className="text-primary">{DEVICE_ID}</code>
           </p>
@@ -269,10 +269,9 @@ export default function DebugTransfer() {
               {nodes.map((node) => (
                 <div
                   key={node.uid}
-                  className={`glass rounded-lg p-4 transition-all ${
-                    sender === node.uid ? "border-orange-500 ring-1 ring-orange-500/50" :
-                    receiver === node.uid ? "border-primary ring-1 ring-primary/50" : ""
-                  }`}
+                  className={`glass rounded-lg p-4 transition-all ${sender === node.uid ? "border-orange-500 ring-1 ring-orange-500/50" :
+                      receiver === node.uid ? "border-primary ring-1 ring-primary/50" : ""
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-mono font-bold text-foreground">{node.uid}</span>
@@ -361,7 +360,7 @@ export default function DebugTransfer() {
 
           <div className="flex gap-3">
             <Button onClick={startTransfer} disabled={loading || !sender || !receiver}>
-              {loading ? "Processing..." : "⚡ Start Transfer"}
+              {loading ? "Processing..." : "Start Transfer"}
             </Button>
             <Button variant="destructive" onClick={stopTransfer} disabled={loading}>
               {loading ? "..." : "🛑 Stop All"}
