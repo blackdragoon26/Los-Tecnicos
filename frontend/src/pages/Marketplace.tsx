@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Networks, TransactionBuilder, Account, Operation, xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
+import { Networks, TransactionBuilder, Account, Operation, xdr, Address, scValToNative, nativeToScVal, Contract, rpc } from "@stellar/stellar-sdk";
 
 export default function Marketplace() {
   const { user, isConnected, publicKey } = useWallet();
@@ -85,7 +85,6 @@ export default function Marketplace() {
 
       // 2. Build the contract call using the high-level Contract class
       // This handles all XDR encoding automatically (same as the Stellar CLI)
-      const { Contract, SorobanRpc } = await import("@stellar/stellar-sdk");
       const contract = new Contract(contractId);
 
       const kwhRaw = BigInt(Math.round(parseFloat(amount) * 1000));
@@ -127,7 +126,7 @@ export default function Marketplace() {
       toast.info("Simulating on Soroban Testnet...");
       const rpcUrl = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
       try {
-        const server = new SorobanRpc.Server(rpcUrl);
+        const server = new rpc.Server(rpcUrl);
         const preparedTx = await server.prepareTransaction(tx);
         // prepareTransaction returns an assembled, ready-to-sign Transaction
         tx = preparedTx as any;
