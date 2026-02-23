@@ -51,8 +51,10 @@ export default {
       "title": "Stelltron",
       "logo": {
         "alt": "Stelltron Logo",
-        "src": "img/logo.svg",
-        "srcDark": "img/logo.svg"
+        "src": "img/logo.png",
+        "srcDark": "img/logo.png",
+        "width": 32,
+        "height": 32
       },
       "items": [
         {
