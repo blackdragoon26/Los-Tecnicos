@@ -259,7 +259,7 @@ See the `/deploy_full_stack` workflow in `.agent/workflows/` for the full deploy
 
 | Resource | URL |
 |----------|-----|
-| Frontend | [los-tecnicos-frontend.vercel.app](https://los-tecnicos-frontend.vercel.app/) |
+| Frontend | [los-tecnicos-frontend.vercel.app](https://los-tecnicos.vercel.app/) |
 | Backend | [los-tecnicos-backend.onrender.com](https://los-tecnicos-backend.onrender.com/) |
 | GitHub | [github.com/blackdragoon26/Los-Tecnicos](https://github.com/blackdragoon26/Los-Tecnicos) |
 | Stellar Testnet | [stellar.expert/explorer/testnet](https://stellar.expert/explorer/testnet) |
