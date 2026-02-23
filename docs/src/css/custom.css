@@ -1,69 +1,131 @@
-/* Stelltron Docs — Custom CSS */
+/* Stelltron Docs */
 
+/* Google Fonts — load before vars so they're available */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ─── Color scale derived from #7f9442 (HSL 84°, 37%, 42%) ─── */
 :root {
-  --ifm-color-primary: #7c3aed;
-  --ifm-color-primary-dark: #6d28d9;
-  --ifm-color-primary-darker: #5b21b6;
-  --ifm-color-primary-darkest: #4c1d95;
-  --ifm-color-primary-light: #8b5cf6;
-  --ifm-color-primary-lighter: #a78bfa;
-  --ifm-color-primary-lightest: #c4b5fd;
+  --ifm-color-primary: #7f9442;
+  --ifm-color-primary-dark: #718537;
+  --ifm-color-primary-darker: #637733;
+  --ifm-color-primary-darkest: #485728;
+  --ifm-color-primary-light: #8fa352;
+  --ifm-color-primary-lighter: #a3b56a;
+  --ifm-color-primary-lightest: #bfca8f;
 
   --ifm-code-font-size: 92%;
-  --docusaurus-highlighted-code-line-bg: rgba(124, 58, 237, 0.1);
-
   --ifm-font-family-base: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ifm-heading-font-weight: 600;
+  --docusaurus-highlighted-code-line-bg: rgba(127, 148, 66, 0.12);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #a78bfa;
-  --ifm-color-primary-dark: #8b5cf6;
-  --ifm-color-primary-darker: #7c3aed;
-  --ifm-color-primary-darkest: #6d28d9;
-  --ifm-color-primary-light: #c4b5fd;
-  --ifm-color-primary-lighter: #ddd6fe;
-  --ifm-color-primary-lightest: #ede9fe;
-  --ifm-background-color: #0f0f1a;
-  --ifm-navbar-background-color: #0f0f1a;
-  --docusaurus-highlighted-code-line-bg: rgba(167, 139, 250, 0.15);
+  --ifm-color-primary: #96ab54;
+  --ifm-color-primary-dark: #7f9442;
+  --ifm-color-primary-darker: #718537;
+  --ifm-color-primary-darkest: #56652a;
+  --ifm-color-primary-light: #a8ba64;
+  --ifm-color-primary-lighter: #bfca88;
+  --ifm-color-primary-lightest: #d4dba8;
+
+  /* Pure dark charcoal — matches the frontend exactly */
+  --ifm-background-color: #1e1e1e;
+  --ifm-background-surface-color: #252525;
+  --ifm-navbar-background-color: #1a1a1a;
+  --ifm-footer-background-color: #151515;
+  --ifm-color-content: #d4d4d4;
+  --ifm-color-content-secondary: #a0a0a0;
+  --ifm-toc-border-color: #2e2e2e;
+
+  --docusaurus-highlighted-code-line-bg: rgba(127, 148, 66, 0.15);
 }
 
-/* Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-code, pre {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+/* ─── Typography ─── */
+code,
+pre,
+kbd {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
 }
 
-/* Navbar */
+/* ─── Sidebar ─── */
+[data-theme='dark'] .menu {
+  background-color: #1a1a1a;
+}
+
+[data-theme='dark'] .menu__link--active {
+  color: #96ab54;
+}
+
+/* ─── Navbar ─── */
 .navbar {
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid #2e2e2e;
 }
 
-/* Tables */
+[data-theme='dark'] .navbar {
+  box-shadow: none;
+}
+
+/* ─── Tables ─── */
 table {
   display: table;
   width: 100%;
 }
 
-/* PlantUML code blocks — give them a distinct style */
-.language-plantuml {
-  background: #1a1a2e;
-  border-left: 3px solid var(--ifm-color-primary);
+[data-theme='dark'] table tr:nth-child(2n) {
+  background-color: #252525;
+}
+
+/* ─── PlantUML blocks (rendered as images by the remark plugin,
+       but keep this for any fallback code display) ─── */
+[data-theme='dark'] .language-plantuml {
+  background: #222222;
+  border-left: 3px solid #7f9442;
 }
 
 [data-theme='light'] .language-plantuml {
-  background: #f5f3ff;
-  border-left: 3px solid var(--ifm-color-primary);
+  background: #f4f5f0;
+  border-left: 3px solid #7f9442;
 }
 
-/* Hero banner on homepage */
-.hero--primary {
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a0533 100%);
+/* ─── Code blocks ─── */
+[data-theme='dark'] .prism-code {
+  background-color: #242424 !important;
 }
 
-/* Admonition tweaks */
+/* ─── Admonitions ─── */
 .admonition {
-  border-radius: 6px;
+  border-radius: 4px;
+}
+
+/* ─── Links ─── */
+[data-theme='dark'] a {
+  color: #96ab54;
+}
+
+/* ─── Hero banner ─── */
+.hero--primary {
+  background: linear-gradient(160deg, #1a1a1a 0%, #1e2418 100%);
+}
+
+[data-theme='dark'] a:hover {
+  color: #bfca88;
+}
+
+/* ─── Scrollbar (dark mode) ─── */
+[data-theme='dark'] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #7f9442;
 }

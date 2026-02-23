@@ -90,11 +90,11 @@ Micro-transactions for energy (selling 1 kWh for ~$0.10) are only viable if fees
 | Section | What it covers |
 |---------|---------------|
 | [Architecture](./architecture/system-overview) | Full system design, component interactions |
-| [Smart Contracts](./contracts/overview) | Soroban contract code, storage, functions |
-| [API Reference](./api/overview) | Every endpoint, request/response schemas |
+| [Smart Contracts](./contracts/contracts-overview) | Soroban contract code, storage, functions |
+| [API Reference](./api/api-overview) | Every endpoint, request/response schemas |
 | [Dynamic Pricing](./algorithms/dynamic-pricing) | The six-factor pricing formula |
 | [Matching Engine](./algorithms/matching-engine) | Order matching and trade settlement |
 | [ZK Proofs](./algorithms/zero-knowledge) | Pedersen commitments, range proofs |
-| [IoT Layer](./iot/overview) | Raspberry Pi, ESP32, hardware wiring |
-| [DeFi Protocol](./defi/overview) | LP staking, flash loans, yield mechanics |
+| [IoT Layer](./iot/iot-overview) | Raspberry Pi, ESP32, hardware wiring |
+| [DeFi Protocol](./defi/defi-overview) | LP staking, flash loans, yield mechanics |
 | [Getting Started](./getting-started/quickstart) | Local setup and deployment |

@@ -18,7 +18,7 @@ const config = {
   organizationName: "blackdragoon26",
   projectName: "Los-Tecnicos",
 
-  onBrokenLinks: "warn",
+  onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
 
   i18n: {
@@ -89,7 +89,7 @@ const config = {
             items: [
               { label: "Overview", to: "/" },
               { label: "Getting Started", to: "/getting-started/quickstart" },
-              { label: "API Reference", to: "/api/overview" },
+              { label: "API Reference", to: "/api/api-overview" },
             ],
           },
           {
