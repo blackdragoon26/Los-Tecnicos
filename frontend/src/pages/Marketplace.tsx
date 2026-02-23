@@ -66,11 +66,16 @@ export default function Marketplace() {
       const res = await analyticsApi.getTransactions();
       const txns: any[] = (res as any).data ?? res ?? [];
       // Find a Pending transaction for this user not yet shown
+      // Ensure the transaction was created recently (within the last 60 seconds) to avoid old stuck transactions popping up on load
+      const now = new Date().getTime();
       const pending = txns.find(
-        (t) =>
-          (t.donor_id === user?.id || t.recipient_id === user?.id) &&
-          t.status === "Pending" &&
-          !seenTxIds.has(t.id)
+        (t) => {
+          const isUser = t.donor_id === user?.id || t.recipient_id === user?.id;
+          const isPending = t.status === "Pending";
+          const isUnseen = !seenTxIds.has(t.id);
+          const isRecent = t.timestamp ? (now - new Date(t.timestamp).getTime() < 60000) : true;
+          return isUser && isPending && isUnseen && isRecent;
+        }
       );
       if (pending && !activeTransfer) {
         setSeenTxIds((prev) => new Set([...prev, pending.id]));
