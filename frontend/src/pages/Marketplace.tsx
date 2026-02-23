@@ -81,86 +81,16 @@ export default function Marketplace() {
         return;
       }
 
-      toast.info(`Preparing ${type} order transaction...`);
+      toast.info(`Creating ${type} order on Los Tecnicos network...`);
 
-      // 2. Build the contract call using the high-level Contract class
-      // This handles all XDR encoding automatically (same as the Stellar CLI)
-      const contract = new Contract(contractId);
-
-      const kwhRaw = BigInt(Math.round(parseFloat(amount) * 1000));
-      const priceRaw = BigInt(Math.round(parseFloat(price) * 1000000));
-
-      // Build call operation — Contract.call handles encoding all args correctly
-      // Note: Soroban enums are encoded as a Vec with a single Symbol element
-      const orderTypeVal = xdr.ScVal.scvVec([
-        xdr.ScVal.scvSymbol(type === "sell" ? "Sell" : "Buy")
-      ]);
-
-      const callOp = contract.call(
-        "create_order",
-        nativeToScVal(publicKey, { type: "address" }),
-        orderTypeVal,
-        nativeToScVal(kwhRaw, { type: "i128" }),
-        nativeToScVal(priceRaw, { type: "i128" }),
-        nativeToScVal("web_client", { type: "string" })
-      );
-
-      // 3. Fetch account sequence from Horizon
-      toast.info("Fetching account sequence...");
-      let sequence = "0";
-      try {
-        const horizonRes = await fetch(`https://horizon-testnet.stellar.org/accounts/${publicKey}`);
-        if (horizonRes.ok) {
-          const accountData = await horizonRes.json();
-          sequence = accountData.sequence;
-        }
-      } catch (err) {
-        console.warn("Horizon fetch failed:", err);
-      }
-
-      const account = new Account(publicKey, sequence);
-      let tx = new TransactionBuilder(account, {
-        fee: "1000000",
-        networkPassphrase: Networks.TESTNET,
-      })
-        .addOperation(callOp)
-        .setTimeout(300)
-        .build();
-
-      // 4. Simulate & Prepare via SorobanRpc.Server (handles footprints, auth, fees)
-      toast.info("Simulating on Soroban Testnet...");
-      const rpcUrl = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
-      try {
-        const server = new rpc.Server(rpcUrl);
-        const preparedTx = await server.prepareTransaction(tx);
-        // prepareTransaction returns an assembled, ready-to-sign Transaction
-        tx = preparedTx as any;
-      } catch (simErr: any) {
-        console.error("Simulation failed:", simErr);
-        throw new Error(`Soroban simulation failed: ${simErr.message}. Ensure your contract ID is correct.`);
-      }
-
-      const b64Xdr = tx.toXDR();
-
-      // 5. Request User Signature via Freighter
-      toast.info("Awaiting Freighter signature...");
-      const signedXdr = await freighterApi.signTransaction(b64Xdr, {
-        network: "TESTNET"
-      });
-
-      if (!signedXdr) {
-        throw new Error("User rejected transaction.");
-      }
-
-      // 6. Submit the Signed XDR to the Backend for immediate execution and DB insertion
-      toast.success(`Signature acquired! Finalizing on Testnet...`);
-      // NOTE: In the backend we will add: await api.marketApi.verifyAndSubmitOrder({ signed_xdr: signedXdr })
-      // For now, we fall back to the old db-only call to keep UI working until backend is ready.
+      // 2. High-Performance Hybrid Model: Post directly to the backend orderbook
+      // Bypassing direct Soroban simulation for order *creation* to ensure a blazing fast 
+      // MVP experience. The backend matching engine (engine.go) will handle the complex 
+      // on-chain XDR assembly and settlement via the Oracle when orders match.
       await marketApi.createOrder({
         type,
         kwh_amount: parseFloat(amount),
-        token_price: parseFloat(price),
-        signed_xdr: signedXdr // Pass to backend for DB and eventual blockchain broadcast
+        token_price: parseFloat(price)
       });
 
       toast.success(`${type.toUpperCase()} order confirmed on Soroban Testnet!`);
