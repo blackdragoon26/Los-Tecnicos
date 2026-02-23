@@ -129,17 +129,56 @@ export default function Marketplace() {
       }
 
       const account = new Account(publicKey, sequence);
-      const tx = new TransactionBuilder(account, {
-        fee: "10000",
+      let tx = new TransactionBuilder(account, {
+        fee: "100000",
         networkPassphrase: Networks.TESTNET,
       })
         .addOperation(invokeHostFunctionOp)
-        .setTimeout(180)
+        .setTimeout(300)
         .build();
+
+      // 4. Simulate Transaction to get Footprints and Resource Fees
+      toast.info("Simulating resources on Soroban...");
+      const rpcUrl = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+      try {
+        const simRes = await fetch(rpcUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "simulateTransaction",
+            params: [tx.toXDR()],
+          }),
+        });
+        const simData = await simRes.json();
+        if (simData.error) throw new Error(`Simulation Error: ${simData.error.message}`);
+
+        if (simData.result.error) {
+          throw new Error(`Simulation Failed: ${simData.result.error}`);
+        }
+
+        // Add simulation data to transaction
+        const sorobanData = xdr.SorobanTransactionData.fromXDR(simData.result.transactionData, "base64");
+
+        // Rebuild transaction with simulated data
+        tx = new TransactionBuilder(account, {
+          fee: (BigInt(simData.result.minResourceFee) + BigInt(20000)).toString(),
+          networkPassphrase: Networks.TESTNET,
+        })
+          .addOperation(invokeHostFunctionOp)
+          .setSorobanData(sorobanData)
+          .setTimeout(300)
+          .build();
+
+      } catch (simErr: any) {
+        console.error("Simulation failed:", simErr);
+        throw new Error(`Soroban simulation failed: ${simErr.message}. Ensure your contract ID is correct.`);
+      }
 
       const b64Xdr = tx.toXDR();
 
-      // 4. Request User Signature via Freighter
+      // 5. Request User Signature via Freighter
       toast.info("Awaiting Freighter signature...");
       const signedXdr = await freighterApi.signTransaction(b64Xdr, {
         network: "TESTNET"
@@ -149,7 +188,7 @@ export default function Marketplace() {
         throw new Error("User rejected transaction.");
       }
 
-      // 5. Submit the Signed XDR to the Backend for immediate execution and DB insertion
+      // 6. Submit the Signed XDR to the Backend for immediate execution and DB insertion
       toast.success(`Signature acquired! Finalizing on Testnet...`);
       // NOTE: In the backend we will add: await api.marketApi.verifyAndSubmitOrder({ signed_xdr: signedXdr })
       // For now, we fall back to the old db-only call to keep UI working until backend is ready.
