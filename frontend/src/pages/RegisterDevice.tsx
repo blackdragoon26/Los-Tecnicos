@@ -23,11 +23,14 @@ export default function RegisterDevice() {
         try {
             const freighterApi = await import("@stellar/freighter-api");
 
+            const STELLAR_NETWORK = (import.meta as any).env?.VITE_STELLAR_NETWORK === "testnet" ? "TESTNET" : "PUBLIC";
+            const currentPassphrase = STELLAR_NETWORK === "TESTNET" ? Networks.TESTNET : Networks.PUBLIC;
+
             // We construct a dummy transaction just to trigger the Freighter Signature popup for the pitch video.
             const account = new Account(publicKey, "1");
             const tx = new TransactionBuilder(account, {
                 fee: "100",
-                networkPassphrase: Networks.TESTNET,
+                networkPassphrase: currentPassphrase,
             })
                 .setTimeout(30)
                 .addMemo(Memo.text(`LINK:${nodeMac.substring(0, 23)}`))
@@ -37,7 +40,7 @@ export default function RegisterDevice() {
 
             // This triggers the real Freighter popup!
             const signedXdr = await freighterApi.signTransaction(xdr, {
-                network: "TESTNET"
+                network: STELLAR_NETWORK
             });
 
             if (signedXdr) {
