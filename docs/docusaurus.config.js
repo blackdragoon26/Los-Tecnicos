@@ -10,7 +10,7 @@ const darkCodeTheme = themes.dracula;
 const config = {
   title: "Stelltron",
   tagline: "Peer-to-peer solar energy trading on Stellar",
-  favicon: "img/favicon.ico",
+  favicon: "img/logo.png",
 
   url: "https://los-tecnicos.vercel.app",
   baseUrl: "/",
