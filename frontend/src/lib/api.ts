@@ -59,9 +59,17 @@ async function request<T>(endpoint: string, options?: RequestInit, isRoot = fals
   if (!res.ok) {
     let errorMsg = `API Error: ${res.status} ${res.statusText}`;
     try {
-      const errorData = await res.json();
-      errorMsg = errorData.error || errorData.message || errorMsg;
-      if (errorData.details) errorMsg += `: ${errorData.details}`;
+      const text = await res.text();
+      try {
+        const errorData = JSON.parse(text);
+        errorMsg = errorData.error || errorData.message || errorMsg;
+        if (errorData.details) errorMsg += `: ${errorData.details}`;
+      } catch {
+        // Not JSON, use raw text (truncate if too long)
+        if (text && text.length > 0) {
+          errorMsg = text.length > 150 ? text.substring(0, 150) + "..." : text;
+        }
+      }
     } catch { }
     throw new Error(errorMsg);
   }

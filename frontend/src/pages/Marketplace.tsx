@@ -114,14 +114,27 @@ export default function Marketplace() {
       );
 
       // 3. Assemble the Transaction Envelope
-      // Use a dummy sequence number since we're just forwarding the signed XDR to the backend right now to sponsor/execute
-      const account = new Account(publicKey, "1");
+      // Fetch the real sequence number from Horizon Testnet so the signature is valid
+      toast.info("Fetching account sequence...");
+      let sequence = "1";
+      try {
+        const horizonRes = await fetch(`https://horizon-testnet.stellar.org/accounts/${publicKey}`);
+        if (horizonRes.ok) {
+          const accountData = await horizonRes.json();
+          sequence = accountData.sequence;
+          console.log(`>>> Web3: Using sequence ${sequence} for account ${publicKey}`);
+        }
+      } catch (err) {
+        console.warn("Horizon fetch failed, falling back to dummy sequence:", err);
+      }
+
+      const account = new Account(publicKey, sequence);
       const tx = new TransactionBuilder(account, {
         fee: "10000",
         networkPassphrase: Networks.TESTNET,
       })
         .addOperation(invokeHostFunctionOp)
-        .setTimeout(120)
+        .setTimeout(180)
         .build();
 
       const b64Xdr = tx.toXDR();
