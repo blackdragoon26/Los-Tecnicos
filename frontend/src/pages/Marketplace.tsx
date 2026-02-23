@@ -91,10 +91,15 @@ export default function Marketplace() {
       const priceRaw = BigInt(Math.round(parseFloat(price) * 1000000));
 
       // Build call operation — Contract.call handles encoding all args correctly
+      // Note: Soroban enums are encoded as a Vec with a single Symbol element
+      const orderTypeVal = xdr.ScVal.scvVec([
+        xdr.ScVal.scvSymbol(type === "sell" ? "Sell" : "Buy")
+      ]);
+
       const callOp = contract.call(
         "create_order",
         nativeToScVal(publicKey, { type: "address" }),
-        xdr.ScVal.scvSymbol(type === "sell" ? "Sell" : "Buy"),
+        orderTypeVal,
         nativeToScVal(kwhRaw, { type: "i128" }),
         nativeToScVal(priceRaw, { type: "i128" }),
         nativeToScVal("web_client", { type: "string" })
