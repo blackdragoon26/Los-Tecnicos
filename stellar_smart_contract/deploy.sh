@@ -2,7 +2,7 @@
 set -e
 
 # Configuration
-NETWORK="mainnet"
+NETWORK="testnet"
 # Ensure we are in the project root
 cd "$(dirname "$0")"
 
@@ -31,10 +31,7 @@ if ! stellar keys address deployer > /dev/null 2>&1; then
     # Funding is often automatic with generate on testnet or requires 'stellar keys fund'
     # New CLI sometimes auto-funds. Let's be explicit if needed.
     # explicit fund command:
-    # stellar keys fund deployer --network "$NETWORK"  # Friendbot doesn't exist on mainnet
-    echo "⚠️  Ensure 'deployer' is manually funded with XLM on Mainnet!"
-    echo "   Waiting 15 seconds for you to verify funding..."
-    sleep 15
+    stellar keys fund deployer --network "$NETWORK"
 else
     echo "✅ Identity 'deployer' found: $(stellar keys address deployer)"
 fi
@@ -55,7 +52,6 @@ TOKEN_ID=$(stellar contract deploy \
     --wasm "$TOKEN_WASM" \
     --source deployer \
     --network "$NETWORK" \
-    --inclusion-fee 100000 \
     --alias energy_token)
 echo "✅ Energy Token Deployed: $TOKEN_ID"
 
@@ -66,7 +62,6 @@ stellar contract invoke \
     --id "$TOKEN_ID" \
     --source deployer \
     --network "$NETWORK" \
-    --inclusion-fee 100000 \
     -- \
     initialize \
     --admin "$ADMIN_ADDR"
@@ -78,7 +73,6 @@ MARKET_ID=$(stellar contract deploy \
     --wasm "$MARKET_WASM" \
     --source deployer \
     --network "$NETWORK" \
-    --inclusion-fee 100000 \
     --alias marketplace)
 echo "✅ Marketplace Deployed: $MARKET_ID"
 
@@ -88,7 +82,6 @@ stellar contract invoke \
     --id "$MARKET_ID" \
     --source deployer \
     --network "$NETWORK" \
-    --inclusion-fee 100000 \
     -- \
     initialize \
     --admin "$ADMIN_ADDR" \

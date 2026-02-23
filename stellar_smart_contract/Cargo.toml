@@ -9,12 +9,8 @@ resolver = "2"
 
 [profile.release]
 opt-level = "z"
-overflow-checks = false # Changed to false for extreme space saving
+overflow-checks = true
 debug = false
 panic = "abort"
 lto = true
 codegen-units = 1
-strip = true # Added strip
-[profile.release-with-logs]
-inherits = "release"
-debug = true
