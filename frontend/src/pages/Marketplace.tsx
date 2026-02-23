@@ -85,10 +85,25 @@ export default function Marketplace() {
 
       // 2. Build the Soroban InvokeHostFunction XDR for the "create_order" endpoint on the contract
       // Function signature: create_order(env: Env, user: Address, order_type: OrderType, kwh_amount: i128, price_per_kwh: i128, device_id: String)
-      // Note: order_type is an Enum. 0 = Buy, 1 = Sell (or as defined in Rust schema)
       const orderTypeVal = type === "sell" ? "Sell" : "Buy";
 
-      // Use the older stellar-sdk syntax for host functions
+      // Helper: build a proper i128 ScVal from a JS number
+      // nativeToScVal with "i128" can fail with regular numbers - must use explicit XDR construction
+      const toI128 = (value: number): xdr.ScVal => {
+        const bigVal = BigInt(Math.round(value));
+        const hi = bigVal >> 64n;
+        const lo = bigVal & 0xFFFFFFFFFFFFFFFFn;
+        return xdr.ScVal.scvI128(
+          new xdr.Int128Parts({
+            hi: new xdr.Int64(hi),
+            lo: new xdr.Uint64(lo),
+          })
+        );
+      };
+
+      const kwhAmount = parseFloat(amount) * 1000;
+      const pricePerKwh = parseFloat(price) * 1000000;
+
       const invokeHostFunctionOp = Operation.invokeHostFunction({
         func: xdr.HostFunction.hostFunctionTypeInvokeContract(
           new xdr.InvokeContractArgs({
@@ -97,8 +112,8 @@ export default function Marketplace() {
             args: [
               nativeToScVal(publicKey, { type: "address" }),
               nativeToScVal(orderTypeVal, { type: "symbol" }),
-              nativeToScVal(Math.round(parseFloat(amount) * 1000), { type: "i128" }),
-              nativeToScVal(Math.round(parseFloat(price) * 1000000), { type: "i128" }),
+              toI128(kwhAmount),
+              toI128(pricePerKwh),
               nativeToScVal("web_client", { type: "string" }),
             ],
           })
