@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Networks, TransactionBuilder, Account, xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
+import { Networks, TransactionBuilder, Account, Operation, xdr, Address, scValToNative, nativeToScVal } from "@stellar/stellar-sdk";
 
 export default function Marketplace() {
   const { user, isConnected, publicKey } = useWallet();
@@ -89,29 +89,22 @@ export default function Marketplace() {
       const orderTypeEnumVal = type === "sell" ? 1 : 0;
 
       // Use the older stellar-sdk syntax for host functions
-      const invokeHostFunctionOp = xdr.Operation.fromXDR(
-        new xdr.Operation({
-          sourceAccount: null,
-          body: xdr.OperationBody.invokeHostFunction(
-            new xdr.InvokeHostFunctionOp({
-              hostFunction: xdr.HostFunction.hostFunctionTypeInvokeContract(
-                new xdr.InvokeContractArgs({
-                  contractAddress: Address.fromString(contractId).toScAddress(),
-                  functionName: "create_order",
-                  args: [
-                    nativeToScVal(publicKey, { type: "address" }),
-                    nativeToScVal(orderTypeEnumVal, { type: "u32" }),
-                    nativeToScVal(Math.round(parseFloat(amount) * 1000), { type: "i128" }),
-                    nativeToScVal(Math.round(parseFloat(price) * 1000000), { type: "i128" }),
-                    nativeToScVal("web_client", { type: "string" }),
-                  ],
-                })
-              ),
-              auth: []
-            })
-          )
-        }).toXDR()
-      );
+      const invokeHostFunctionOp = Operation.invokeHostFunction({
+        func: xdr.HostFunction.hostFunctionTypeInvokeContract(
+          new xdr.InvokeContractArgs({
+            contractAddress: Address.fromString(contractId).toScAddress(),
+            functionName: "create_order",
+            args: [
+              nativeToScVal(publicKey, { type: "address" }),
+              nativeToScVal(orderTypeEnumVal, { type: "u32" }),
+              nativeToScVal(Math.round(parseFloat(amount) * 1000), { type: "i128" }),
+              nativeToScVal(Math.round(parseFloat(price) * 1000000), { type: "i128" }),
+              nativeToScVal("web_client", { type: "string" }),
+            ],
+          })
+        ),
+        auth: [],
+      });
 
       // 3. Assemble the Transaction Envelope
       // Fetch the real sequence number from Horizon Testnet so the signature is valid
@@ -148,7 +141,7 @@ export default function Marketplace() {
             jsonrpc: "2.0",
             id: 1,
             method: "simulateTransaction",
-            params: [tx.toXDR()],
+            params: { transaction: tx.toXDR() },
           }),
         });
         const simData = await simRes.json();
