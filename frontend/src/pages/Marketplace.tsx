@@ -86,7 +86,7 @@ export default function Marketplace() {
       // 2. Build the Soroban InvokeHostFunction XDR for the "create_order" endpoint on the contract
       // Function signature: create_order(env: Env, user: Address, order_type: OrderType, kwh_amount: i128, price_per_kwh: i128, device_id: String)
       // Note: order_type is an Enum. 0 = Buy, 1 = Sell (or as defined in Rust schema)
-      const orderTypeEnumVal = type === "sell" ? 1 : 0;
+      const orderTypeVal = type === "sell" ? "Sell" : "Buy";
 
       // Use the older stellar-sdk syntax for host functions
       const invokeHostFunctionOp = Operation.invokeHostFunction({
@@ -96,7 +96,7 @@ export default function Marketplace() {
             functionName: "create_order",
             args: [
               nativeToScVal(publicKey, { type: "address" }),
-              nativeToScVal(orderTypeEnumVal, { type: "u32" }),
+              nativeToScVal(orderTypeVal, { type: "symbol" }),
               nativeToScVal(Math.round(parseFloat(amount) * 1000), { type: "i128" }),
               nativeToScVal(Math.round(parseFloat(price) * 1000000), { type: "i128" }),
               nativeToScVal("web_client", { type: "string" }),
