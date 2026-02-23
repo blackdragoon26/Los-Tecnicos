@@ -2,6 +2,7 @@ package matching
 
 import (
 	"log"
+	"math"
 	"time"
 
 	"los-tecnicos/backend/internal/blockchain"
@@ -39,181 +40,202 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 		return // Nothing to match — silent
 	}
 
-	// Calculate Market Variables for Dynamic Pricing
+	// Calculate Market Variables for Dynamic Pricing (used for analytics/logging)
 	supplyVol := float64(len(openSellOrders))
 	demandVol := float64(len(openBuyOrders))
 	socAvg := GetCommunitySoC()
 
-	// Simple matching logic: Iterate through sell orders and find a matching buy order
-	for _, sellOrder := range openSellOrders {
-		for _, buyOrder := range openBuyOrders {
-			// Check if orders are still available (not matched in this same loop)
+	// Standard order-book matching:
+	// Iterate sell orders (cheapest first) and match against buy orders (highest bid first)
+	for i := range openSellOrders {
+		sellOrder := &openSellOrders[i]
+		for j := range openBuyOrders {
+			buyOrder := &openBuyOrders[j]
+
+			// Skip already-matched or cancelled orders
 			if sellOrder.Status != "Created" || buyOrder.Status != "Created" {
 				continue
 			}
 
-			// Calculate Dynamic Price
-			// For distance, we'd need user locations. For now assuming distance = 1 (neighbor).
-			// Base price is the Seller's asking price.
-			pe := pricing.NewPricingEngine()
-			dynamicPrice, _, err := pe.CalculateDynamicPrice(buyOrder, sellOrder, supplyVol, demandVol, socAvg, 1.0)
-			if err != nil {
-				log.Printf("Error calculating price: %v", err)
+			// ---- PRICE CHECK: Standard order-book semantics ----
+			// A match occurs when the buyer's limit price >= seller's ask price.
+			// Settlement is at the seller's ask price (maker-taker model).
+			if buyOrder.TokenPrice < sellOrder.TokenPrice {
+				continue // No price overlap — skip
+			}
+
+			// Settlement price is the seller's ask (price improvement for the buyer)
+			settlementPrice := sellOrder.TokenPrice
+
+			// ---- QUANTITY: Support partial fills ----
+			matchedKwh := math.Min(buyOrder.KwhAmount, sellOrder.KwhAmount)
+			if matchedKwh <= 0 {
 				continue
 			}
 
-			// Price condition: buyer is willing to pay at least the dynamic price (or the seller's price if calc fails)
-			// We effectively use the dynamic price as the settlement price.
-			// However, if dynamic price > buyer's limit, the trade might not happen unless we treat buy limit as soft?
-			// For this MVP, let's say if Dynamic Price <= Buyer's Limit, we execute AT Dynamic Price.
-			if buyOrder.TokenPrice >= dynamicPrice {
-				// Quantity condition: for simplicity, we match the exact amount for now
-				if buyOrder.KwhAmount == sellOrder.KwhAmount {
+			// Log dynamic price for analytics only (not used for gating)
+			pe := pricing.NewPricingEngine()
+			dynamicPrice, _, _ := pe.CalculateDynamicPrice(*buyOrder, *sellOrder, supplyVol, demandVol, socAvg, 1.0)
 
-					// --- ZK PRIVACY CHECK (Simulated Device Logic) ---
-					// The Seller provides a ZK Proof that their battery > 20% without revealing it.
-					// 1. Seller creates proof (Simulated here as if coming from device)
-					// In a real system, the 'device' sends this proof attached to the order.
+			// --- ZK PRIVACY CHECK (Simulated Device Logic) ---
+			// The Seller provides a ZK Proof that their battery > 20% without revealing it.
+			zkCommitment, err := zk.NewPedersenCommitment(int64(socAvg * 100)) // Using Avg SoC as proxy for seller's real soc
+			if err != nil {
+				log.Printf("ZK Setup Failed for seller %s: %v", sellOrder.UserID, err)
+				continue
+			}
 
-					// Use the new Ristretto255 implementation
-					zkCommitment, err := zk.NewPedersenCommitment(int64(socAvg * 100)) // Using Avg SoC as proxy for seller's real soc
-					if err != nil {
-						log.Printf("ZK Setup Failed for seller %s: %v", sellOrder.UserID, err)
-						continue
-					}
+			proof, err := zkCommitment.GenerateRangeProof(20) // Requirement: > 20% charge
+			if err != nil {
+				log.Printf("ZK Proof Generation Failed for seller %s: %v", sellOrder.UserID, err)
+				continue // Skip if they can't prove battery health
+			}
 
-					proof, err := zkCommitment.GenerateRangeProof(20) // Requirement: > 20% charge
-					if err != nil {
-						log.Printf("ZK Proof Generation Failed for seller %s: %v", sellOrder.UserID, err)
-						continue // Skip if they can't prove battery health
-					}
+			if !zk.VerifyRangeProof(proof) {
+				log.Printf("ZK Proof Verification FAILED for seller %s. Rejecting match.", sellOrder.UserID)
+				continue
+			}
+			log.Printf(">>> ZK PRIVACY: Seller %s proved Battery > 20%% with Commitment %s", sellOrder.UserID, proof.CommitmentStr)
+			// ------------------------------------
 
-					// 2. Matching Engine Verifies the Proof
-					if !zk.VerifyRangeProof(proof) {
-						log.Printf("ZK Proof Verification FAILED for seller %s. Rejecting match.", sellOrder.UserID)
-						continue
-					}
-					log.Printf(">>> ZK PRIVACY: Seller %s proved Battery > 20%% with Commitment %s", sellOrder.UserID, proof.CommitmentStr)
-					// ------------------------------------
+			log.Printf("Match found! Buy: %s (limit %.4f), Sell: %s (ask %.4f), Qty: %.4f kWh",
+				buyOrder.ID, buyOrder.TokenPrice, sellOrder.ID, sellOrder.TokenPrice, matchedKwh)
+			log.Printf("Settlement Price: %.4f (Ask) | Dynamic Price (analytics): %.4f", settlementPrice, dynamicPrice)
 
-					log.Printf("Match found! Buy: %s, Sell: %s", buyOrder.ID, sellOrder.ID)
-					log.Printf("Settlement Price: %f (Dynamic) vs %f (Ask)", dynamicPrice, sellOrder.TokenPrice)
+			// 3. Match found - Execute Transaction on Blockchain FIRST
+			log.Printf(">>> PRE-SETTLEMENT: Attempting to settle match on Soroban Testnet...")
 
-					// 3. Match found - Execute Transaction on Blockchain FIRST
-					log.Printf(">>> PRE-SETTLEMENT: Attempting to settle match on Soroban Testnet...")
-
-					// Build the Oracle XDR to call match_orders on the Marketplace contract
-					contractID := config.GetEnv("MARKETPLACE_CONTRACT_ID", "")
-					if contractID != "" {
-						payloadBytes := []byte("marketplace_match")
-						// Trigger the actual transaction
-						txHash, err := sorobanClient.TriggerContractCall(contractID, "match_orders", sellOrder.ID, payloadBytes)
-						if err != nil {
-							log.Printf(">>> BLOCKCHAIN ERROR: Failed to match orders on-chain: %v", err)
-							continue // Skip DB commit if blockchain fails
-						}
-						log.Printf(">>> BLOCKCHAIN SUCCESS: Soroban Testnet verified match! TxHash: %s", txHash)
-					} else {
-						log.Printf(">>> WARNING: MARKETPLACE_CONTRACT_ID not set! Proceeding with offline DB-only settlement (Dev Mode).")
-					}
-
-					// 4. Update Database only AFTER Blockchain success (or Dev Mode continuation)
-					dbErr := database.DB.Transaction(func(tx *gorm.DB) error {
-						// Update orders
-						if err := tx.Model(&buyOrder).Update("status", "Matched").Error; err != nil {
-							return err
-						}
-						if err := tx.Model(&sellOrder).Update("status", "Matched").Error; err != nil {
-							return err
-						}
-
-						// Create transaction record
-						transaction := domain.Transaction{
-							ID:             "txn_" + buyOrder.ID,
-							DonorID:        sellOrder.UserID,
-							RecipientID:    buyOrder.UserID,
-							KwhAmount:      buyOrder.KwhAmount,
-							TokenAmount:    buyOrder.KwhAmount * dynamicPrice,
-							BlockchainHash: "soroban_" + "txn_" + buyOrder.ID,
-							Status:         "Pending",
-							Timestamp:      time.Now(),
-						}
-						if err := tx.Create(&transaction).Error; err != nil {
-							return err
-						}
-
-						// --- DEFI YIELD ACCRUAL (Persistence) ---
-						yieldAmount := buyOrder.KwhAmount * dynamicPrice * 0.05 / 365
-						yieldRecord := domain.YieldRecord{
-							UserID:    sellOrder.UserID,
-							Amount:    yieldAmount,
-							Source:    "LiquidityPool_Staking",
-							Timestamp: time.Now(),
-						}
-						if err := tx.Create(&yieldRecord).Error; err != nil {
-							log.Printf("Failed to persist yield: %v", err)
-						}
-						log.Printf(">>> DEFI: Persisted Yield Record of %.6f XLM for User %s", yieldAmount, sellOrder.UserID)
-
-						// --- TOKEN BURN ---
-						tokensBurned := buyOrder.KwhAmount * 1000
-						burnRecord := domain.TokenBurn{
-							OrderID:      buyOrder.ID,
-							TokensBurned: tokensBurned,
-							BurnReason:   "trade_settlement",
-							TxHash:       "burn_" + time.Now().Format("20060102_150405"),
-							Timestamp:    time.Now(),
-						}
-						if err := tx.Create(&burnRecord).Error; err != nil {
-							log.Printf("Failed to persist burn: %v", err)
-						}
-						log.Printf(">>> BURN: 🔥 %.0f LT tokens burned (%.4f kWh consumed)", tokensBurned, buyOrder.KwhAmount)
-
-						// --- TRADE FEE ---
-						tradeFee := buyOrder.KwhAmount * dynamicPrice * 0.025
-						lpYield := domain.YieldRecord{
-							UserID:    "liquidity_pool",
-							Amount:    tradeFee,
-							Source:    "Trade_Commission_2.5pct",
-							Timestamp: time.Now(),
-						}
-						if err := tx.Create(&lpYield).Error; err != nil {
-							log.Printf("Failed to persist LP yield: %v", err)
-						}
-
-						// --- CARBON CREDIT ---
-						co2Saved := buyOrder.KwhAmount * 0.82
-						carbonCredit := domain.CarbonCredit{
-							DeviceID:    "marketplace",
-							KwhOffset:   buyOrder.KwhAmount,
-							CO2SavedKg:  co2Saved,
-							CreditValue: co2Saved * 0.05,
-							Timestamp:   time.Now(),
-						}
-						if err := tx.Create(&carbonCredit).Error; err != nil {
-							log.Printf("Failed to persist carbon credit: %v", err)
-						}
-
-						return nil
-					})
-
-					if dbErr != nil {
-						log.Printf("Error processing match: %v", dbErr)
-						continue
-					}
-
-					// 5. COORDINATION: Send lock command to donor's IoT device
-					var device domain.IoTDevice
-					if err := database.DB.Where("owner_id = ? AND device_type = ?", sellOrder.UserID, "esp32").First(&device).Error; err == nil {
-						log.Printf("Sending lock command to device: %s", device.ID)
-						mqtt.SendLockCommand(device.ID, sellOrder.ID, sellOrder.KwhAmount)
-					} else {
-						log.Printf("No ESP32 device found for donor %s, skipping IoT lock simulation", sellOrder.UserID)
-					}
-
-					// Break inner loop to move to next sell order
-					break
+			contractID := config.GetEnv("MARKETPLACE_CONTRACT_ID", "")
+			if contractID != "" {
+				payloadBytes := []byte("marketplace_match")
+				txHash, err := sorobanClient.TriggerContractCall(contractID, "match_orders", sellOrder.ID, payloadBytes)
+				if err != nil {
+					log.Printf(">>> BLOCKCHAIN ERROR: Failed to match orders on-chain: %v", err)
+					continue // Skip DB commit if blockchain fails
 				}
+				log.Printf(">>> BLOCKCHAIN SUCCESS: Soroban Testnet verified match! TxHash: %s", txHash)
+			} else {
+				log.Printf(">>> WARNING: MARKETPLACE_CONTRACT_ID not set! Proceeding with offline DB-only settlement (Dev Mode).")
+			}
+
+			// 4. Update Database only AFTER Blockchain success (or Dev Mode continuation)
+			dbErr := database.DB.Transaction(func(tx *gorm.DB) error {
+				// Determine new statuses based on whether full or partial fill
+				buyStatus := "Matched"
+				if matchedKwh < buyOrder.KwhAmount {
+					buyStatus = "PartiallyFilled"
+				}
+				sellStatus := "Matched"
+				if matchedKwh < sellOrder.KwhAmount {
+					sellStatus = "PartiallyFilled"
+				}
+
+				if err := tx.Model(buyOrder).Updates(map[string]interface{}{
+					"status":     buyStatus,
+					"kwh_amount": buyOrder.KwhAmount - matchedKwh,
+				}).Error; err != nil {
+					return err
+				}
+				if err := tx.Model(sellOrder).Updates(map[string]interface{}{
+					"status":     sellStatus,
+					"kwh_amount": sellOrder.KwhAmount - matchedKwh,
+				}).Error; err != nil {
+					return err
+				}
+
+				// Update in-memory quantities so the outer loop sees the residual
+				buyOrder.KwhAmount -= matchedKwh
+				sellOrder.KwhAmount -= matchedKwh
+				buyOrder.Status = buyStatus
+				sellOrder.Status = sellStatus
+
+				// Create transaction record
+				transaction := domain.Transaction{
+					ID:             "txn_" + buyOrder.ID + "_" + time.Now().Format("20060102150405"),
+					DonorID:        sellOrder.UserID,
+					RecipientID:    buyOrder.UserID,
+					KwhAmount:      matchedKwh,
+					TokenAmount:    matchedKwh * settlementPrice,
+					BlockchainHash: "soroban_txn_" + buyOrder.ID,
+					Status:         "Pending",
+					Timestamp:      time.Now(),
+				}
+				if err := tx.Create(&transaction).Error; err != nil {
+					return err
+				}
+
+				// --- DEFI YIELD ACCRUAL ---
+				yieldAmount := matchedKwh * settlementPrice * 0.05 / 365
+				yieldRecord := domain.YieldRecord{
+					UserID:    sellOrder.UserID,
+					Amount:    yieldAmount,
+					Source:    "LiquidityPool_Staking",
+					Timestamp: time.Now(),
+				}
+				if err := tx.Create(&yieldRecord).Error; err != nil {
+					log.Printf("Failed to persist yield: %v", err)
+				}
+				log.Printf(">>> DEFI: Persisted Yield Record of %.6f XLM for User %s", yieldAmount, sellOrder.UserID)
+
+				// --- TOKEN BURN ---
+				tokensBurned := matchedKwh * 1000
+				burnRecord := domain.TokenBurn{
+					OrderID:      buyOrder.ID,
+					TokensBurned: tokensBurned,
+					BurnReason:   "trade_settlement",
+					TxHash:       "burn_" + time.Now().Format("20060102_150405"),
+					Timestamp:    time.Now(),
+				}
+				if err := tx.Create(&burnRecord).Error; err != nil {
+					log.Printf("Failed to persist burn: %v", err)
+				}
+				log.Printf(">>> BURN: 🔥 %.0f LT tokens burned (%.4f kWh consumed)", tokensBurned, matchedKwh)
+
+				// --- TRADE FEE ---
+				tradeFee := matchedKwh * settlementPrice * 0.025
+				lpYield := domain.YieldRecord{
+					UserID:    "liquidity_pool",
+					Amount:    tradeFee,
+					Source:    "Trade_Commission_2.5pct",
+					Timestamp: time.Now(),
+				}
+				if err := tx.Create(&lpYield).Error; err != nil {
+					log.Printf("Failed to persist LP yield: %v", err)
+				}
+
+				// --- CARBON CREDIT ---
+				co2Saved := matchedKwh * 0.82
+				carbonCredit := domain.CarbonCredit{
+					DeviceID:    "marketplace",
+					KwhOffset:   matchedKwh,
+					CO2SavedKg:  co2Saved,
+					CreditValue: co2Saved * 0.05,
+					Timestamp:   time.Now(),
+				}
+				if err := tx.Create(&carbonCredit).Error; err != nil {
+					log.Printf("Failed to persist carbon credit: %v", err)
+				}
+
+				return nil
+			})
+
+			if dbErr != nil {
+				log.Printf("Error processing match: %v", dbErr)
+				continue
+			}
+
+			// 5. COORDINATION: Send lock command to donor's IoT device
+			var device domain.IoTDevice
+			if err := database.DB.Where("owner_id = ? AND device_type = ?", sellOrder.UserID, "esp32").First(&device).Error; err == nil {
+				log.Printf("Sending lock command to device: %s", device.ID)
+				mqtt.SendLockCommand(device.ID, sellOrder.ID, matchedKwh)
+			} else {
+				log.Printf("No ESP32 device found for donor %s, skipping IoT lock simulation", sellOrder.UserID)
+			}
+
+			// If sell order fully filled, move to next sell
+			if sellOrder.Status == "Matched" {
+				break
 			}
 		}
 	}
