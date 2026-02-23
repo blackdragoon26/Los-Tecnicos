@@ -74,7 +74,7 @@ export default function Marketplace() {
       }
 
       // Fallback to a known Testnet Marketplace ID if not provided in Env
-      const contractId = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID || "CCPQN5DHHN7H2N7K3S6L7F4W7M7Y7K7J7I7H7G7F7E7D7C7B7A7XXXXXXXXX"; // Replace with your actual testnet ID if known
+      const contractId = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID || "CAS3SC5P6SHGUJJNZ36S5PS4CN3MPWFSCKEL4D5PCZU4BZYLFRVQHZCX";
       if (!contractId || contractId.includes("XXXX")) {
         toast.error("Missing VITE_MARKETPLACE_CONTRACT_ID in Vercel/Local Env.");
         console.error("Please set VITE_MARKETPLACE_CONTRACT_ID for the marketplace to function.");
