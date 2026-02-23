@@ -25,7 +25,13 @@ export default function Marketplace() {
   const [marketData, setMarketData] = useState<any>(null);
   const [marketHistory, setMarketHistory] = useState<any[]>([]);
   const [activeTransfer, setActiveTransfer] = useState<any>(null);
-  const [seenTxIds, setSeenTxIds] = useState<Set<string>>(new Set());
+  const [seenTxIds, setSeenTxIds] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem("seenTxIds") || "[]"));
+    } catch {
+      return new Set();
+    }
+  });
 
   const isAuthenticated = isConnected;
 
@@ -65,20 +71,30 @@ export default function Marketplace() {
     try {
       const res = await analyticsApi.getTransactions();
       const txns: any[] = (res as any).data ?? res ?? [];
-      // Find a Pending transaction for this user not yet shown
-      // Ensure the transaction was created recently (within the last 60 seconds) to avoid old stuck transactions popping up on load
       const now = new Date().getTime();
       const pending = txns.find(
         (t) => {
           const isUser = t.donor_id === user?.id || t.recipient_id === user?.id;
           const isPending = t.status === "Pending";
           const isUnseen = !seenTxIds.has(t.id);
-          const isRecent = t.timestamp ? (now - new Date(t.timestamp).getTime() < 60000) : true;
+
+          let isRecent = false;
+          if (t.timestamp) {
+            const txTime = new Date(t.timestamp).getTime();
+            // Allow server to be up to 5 minutes ahead (clock skew), and transaction to be up to 60 seconds old
+            const diff = now - txTime;
+            isRecent = diff > -300000 && diff < 60000;
+          }
+
           return isUser && isPending && isUnseen && isRecent;
         }
       );
       if (pending && !activeTransfer) {
-        setSeenTxIds((prev) => new Set([...prev, pending.id]));
+        setSeenTxIds((prev) => {
+          const next = new Set([...prev, pending.id]);
+          sessionStorage.setItem("seenTxIds", JSON.stringify(Array.from(next)));
+          return next;
+        });
         setActiveTransfer(pending);
       }
     } catch { }
