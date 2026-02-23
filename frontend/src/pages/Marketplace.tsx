@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { ArrowUpRight, ArrowDownLeft, Search, Calculator } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
-import { marketApi } from "@/lib/api";
+import { analyticsApi, marketApi } from "@/lib/api";
 import { Link } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,15 +13,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Networks, TransactionBuilder, Account, Operation, xdr, Address, scValToNative, nativeToScVal, Contract, rpc } from "@stellar/stellar-sdk";
+import EnergyTransferModal from "@/components/EnergyTransferModal";
 
 export default function Marketplace() {
   const { user, isConnected, publicKey } = useWallet();
   const [orders, setOrders] = useState<any[]>([]);
   const [sellAmount, setSellAmount] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
   const [buyAmount, setBuyAmount] = useState("");
+  const [buyPrice, setBuyPrice] = useState("");
   const [marketData, setMarketData] = useState<any>(null);
   const [marketHistory, setMarketHistory] = useState<any[]>([]);
+  const [activeTransfer, setActiveTransfer] = useState<any>(null);
+  const [seenTxIds, setSeenTxIds] = useState<Set<string>>(new Set());
 
   const isAuthenticated = isConnected;
 
@@ -30,6 +34,9 @@ export default function Marketplace() {
       const priceRes = await marketApi.getMarketPrice();
       const newData = priceRes.data ?? priceRes;
       setMarketData(newData);
+      // Seed price inputs from market price on first load only
+      setBuyPrice((prev) => prev || String(parseFloat(newData.price).toFixed(4)));
+      setSellPrice((prev) => prev || String(parseFloat(newData.price).toFixed(4)));
       setMarketHistory((prev) => {
         const newPoint = {
           price: newData.price,
@@ -45,68 +52,92 @@ export default function Marketplace() {
     }
   }, []);
 
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await marketApi.getOrders();
+      setOrders((res as any).data ?? res ?? []);
+    } catch { }
+  }, []);
+
+  // Poll for matched transactions to trigger energy transfer modal
+  const pollTransactions = useCallback(async () => {
+    if (!publicKey) return;
+    try {
+      const res = await analyticsApi.getTransactions();
+      const txns: any[] = (res as any).data ?? res ?? [];
+      // Find a Pending transaction for this user not yet shown
+      const pending = txns.find(
+        (t) =>
+          (t.donor_id === user?.id || t.recipient_id === user?.id) &&
+          t.status === "Pending" &&
+          !seenTxIds.has(t.id)
+      );
+      if (pending && !activeTransfer) {
+        setSeenTxIds((prev) => new Set([...prev, pending.id]));
+        setActiveTransfer(pending);
+      }
+    } catch { }
+  }, [publicKey, user, seenTxIds, activeTransfer]);
+
   useEffect(() => {
     if (isAuthenticated) {
-      const fetchOrders = async () => {
-        try {
-          const res = await marketApi.getOrders();
-          setOrders((res as any).data ?? res ?? []);
-        } catch { }
-      };
       fetchOrders();
       fetchMarketData();
-      const interval = setInterval(fetchMarketData, 10000);
-      return () => clearInterval(interval);
+      const marketInterval = setInterval(() => {
+        fetchMarketData();
+        fetchOrders();
+      }, 10000);
+      const txInterval = setInterval(pollTransactions, 5000);
+      return () => {
+        clearInterval(marketInterval);
+        clearInterval(txInterval);
+      };
     }
-  }, [isAuthenticated, fetchMarketData]);
+  }, [isAuthenticated, fetchMarketData, fetchOrders, pollTransactions]);
 
   const handleCreateOrder = async (type: "buy" | "sell") => {
     const amount = type === "sell" ? sellAmount : buyAmount;
-    const price = marketData?.price;
+    const price = type === "sell" ? sellPrice : buyPrice;
     if (!amount || !price || !publicKey) return;
 
     try {
-      // 1. Authenticate with Freighter
       const freighterApi = await import("@stellar/freighter-api");
       if (!(await freighterApi.isConnected())) {
         toast.error("Freighter wallet not connected.");
         return;
       }
 
-      // Fallback to a known Testnet Marketplace ID if not provided in Env
       const contractId = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID || "CCRWH4Q2OYXZDZFOG7EDPDKHLB7ZMIQ3SNAJY25C5SPAGHPHEWYXVCTP";
       if (!contractId || contractId.includes("XXXX")) {
-        toast.error("Missing VITE_MARKETPLACE_CONTRACT_ID in Vercel/Local Env.");
-        console.error("Please set VITE_MARKETPLACE_CONTRACT_ID for the marketplace to function.");
+        toast.error("Missing VITE_MARKETPLACE_CONTRACT_ID.");
         return;
       }
 
       toast.info(`Creating ${type} order on Los Tecnicos network...`);
 
-      // 2. High-Performance Hybrid Model: Post directly to the backend orderbook
-      // Bypassing direct Soroban simulation for order *creation* to ensure a blazing fast 
-      // MVP experience. The backend matching engine (engine.go) will handle the complex 
-      // on-chain XDR assembly and settlement via the Oracle when orders match.
       await marketApi.createOrder({
         type,
         kwh_amount: parseFloat(amount),
-        token_price: parseFloat(price)
+        token_price: parseFloat(price),
       });
 
-      toast.success(`${type.toUpperCase()} order confirmed on Soroban Testnet!`);
-      const res = await marketApi.getOrders();
-      setOrders((res as any).data ?? res ?? []);
+      toast.success(`${type.toUpperCase()} order placed @ ${parseFloat(price).toFixed(4)} XLM/kWh`);
+      await fetchOrders();
       await fetchMarketData();
-      type === "sell" ? setSellAmount("") : setBuyAmount("");
+      if (type === "sell") {
+        setSellAmount("");
+      } else {
+        setBuyAmount("");
+      }
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || "Failed to create order on blockchain");
+      toast.error(err.message || "Failed to create order");
     }
   };
 
+  const currentPrice = marketData?.price || 0;
   const sellOrders = orders.filter((o) => o.type === "sell").slice(0, 10);
   const buyOrders = orders.filter((o) => o.type === "buy").slice(0, 10);
-  const currentPrice = marketData?.price || 0;
 
   if (!isAuthenticated) {
     return (
@@ -121,6 +152,13 @@ export default function Marketplace() {
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">
+      {/* Energy Transfer Modal */}
+      <EnergyTransferModal
+        transfer={activeTransfer}
+        currentUserId={user?.id ?? ""}
+        onClose={() => setActiveTransfer(null)}
+      />
+
       <div className="container mx-auto max-w-5xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
@@ -188,48 +226,94 @@ export default function Marketplace() {
               <CardContent className="pt-5">
                 <Tabs defaultValue="buy">
                   <TabsList className="w-full h-8">
-                    <TabsTrigger value="buy" className="flex-1 gap-1 text-xs h-6">
-                      <ArrowDownLeft className="w-3 h-3" /> Buy
-                    </TabsTrigger>
-                    <TabsTrigger value="sell" className="flex-1 gap-1 text-xs h-6">
-                      <ArrowUpRight className="w-3 h-3" /> Sell
-                    </TabsTrigger>
+                    <TabsTrigger value="buy" className="flex-1 gap-1 text-xs h-6"><ArrowDownLeft className="w-3 h-3" /> Buy</TabsTrigger>
+                    <TabsTrigger value="sell" className="flex-1 gap-1 text-xs h-6"><ArrowUpRight className="w-3 h-3" /> Sell</TabsTrigger>
                   </TabsList>
 
+                  {/* ── BUY TAB ── */}
                   <TabsContent value="buy" className="mt-4 space-y-3">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
-                      <Input type="number" placeholder="0.00" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} className="h-9" />
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={buyAmount}
+                        onChange={(e) => setBuyAmount(e.target.value)}
+                        className="h-9"
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">Price (XLM/kWh)</Label>
-                      <Input value={currentPrice > 0 ? currentPrice.toFixed(4) : "—"} readOnly className="font-mono h-9" />
+                      <Label className="text-[10px] uppercase tracking-wider">
+                        Limit Price (XLM/kWh)
+                        <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
+                          — editable
+                        </span>
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
+                        value={buyPrice}
+                        onChange={(e) => setBuyPrice(e.target.value)}
+                        className="h-9 font-mono"
+                      />
                     </div>
-                    {buyAmount && currentPrice > 0 && (
+                    {buyAmount && buyPrice && parseFloat(buyPrice) > 0 && (
                       <p className="text-[11px] text-muted-foreground">
-                        Total: <span className="font-medium text-foreground font-mono">{(parseFloat(buyAmount) * currentPrice).toFixed(4)} XLM</span>
+                        Total: <span className="font-medium text-foreground font-mono">
+                          {(parseFloat(buyAmount) * parseFloat(buyPrice)).toFixed(4)} XLM
+                        </span>
                       </p>
                     )}
-                    <Button onClick={() => handleCreateOrder("buy")} className="w-full text-xs h-9" disabled={!buyAmount}>
+                    <Button
+                      onClick={() => handleCreateOrder("buy")}
+                      className="w-full text-xs h-9"
+                      disabled={!buyAmount || !buyPrice}
+                    >
                       Place Buy Order
                     </Button>
                   </TabsContent>
 
+                  {/* ── SELL TAB ── */}
                   <TabsContent value="sell" className="mt-4 space-y-3">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
-                      <Input type="number" placeholder="0.00" value={sellAmount} onChange={(e) => setSellAmount(e.target.value)} className="h-9" />
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={sellAmount}
+                        onChange={(e) => setSellAmount(e.target.value)}
+                        className="h-9"
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">Price (XLM/kWh)</Label>
-                      <Input value={currentPrice > 0 ? currentPrice.toFixed(4) : "—"} readOnly className="font-mono h-9" />
+                      <Label className="text-[10px] uppercase tracking-wider">
+                        Ask Price (XLM/kWh)
+                        <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
+                          — editable
+                        </span>
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
+                        value={sellPrice}
+                        onChange={(e) => setSellPrice(e.target.value)}
+                        className="h-9 font-mono"
+                      />
                     </div>
-                    {sellAmount && currentPrice > 0 && (
+                    {sellAmount && sellPrice && parseFloat(sellPrice) > 0 && (
                       <p className="text-[11px] text-muted-foreground">
-                        Total: <span className="font-medium text-foreground font-mono">{(parseFloat(sellAmount) * currentPrice).toFixed(4)} XLM</span>
+                        Total: <span className="font-medium text-foreground font-mono">
+                          {(parseFloat(sellAmount) * parseFloat(sellPrice)).toFixed(4)} XLM
+                        </span>
                       </p>
                     )}
-                    <Button onClick={() => handleCreateOrder("sell")} className="w-full text-xs h-9" disabled={!sellAmount}>
+                    <Button
+                      onClick={() => handleCreateOrder("sell")}
+                      className="w-full text-xs h-9"
+                      disabled={!sellAmount || !sellPrice}
+                    >
                       Place Sell Order
                     </Button>
                   </TabsContent>
