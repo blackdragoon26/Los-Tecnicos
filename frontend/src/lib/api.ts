@@ -81,7 +81,7 @@ export const authApi = {
 // Market
 export const marketApi = {
   getOrders: () => request<any>("/market/orders"),
-  createOrder: (order: { type: string; kwh_amount: number; token_price: number }) =>
+  createOrder: (order: { type: string; kwh_amount: number; token_price: number; signed_xdr?: string }) =>
     request<any>("/market/order/create", {
       method: "POST",
       body: JSON.stringify(order),
@@ -102,6 +102,11 @@ export const iotApi = {
     request<any>("/iot/device/register", {
       method: "POST",
       body: JSON.stringify(device),
+    }),
+  linkDevice: (payload: { node_mac: string; public_key: string; signed_xdr: string }) =>
+    request<any>("/iot/device/link", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
   getNodes: (deviceId: string) =>
     request<any>(`/iot/nodes/${deviceId}`, undefined, true),
@@ -124,5 +129,14 @@ export const analyticsApi = {
   getTransactions: () => request<any>("/analytics/transactions"),
 };
 
+// Fiat On-Ramp
+export const fiatApi = {
+  createCheckout: (wallet_address: string, lt_amount: number) =>
+    request<{ checkout_url: string; payment_id: string; amount_usd: number }>("/fiat/checkout", {
+      method: "POST",
+      body: JSON.stringify({ wallet_address, lt_amount }),
+    }),
+};
+
 // Convenience re-export
-export const api = { authApi, marketApi, iotApi, analyticsApi };
+export const api = { authApi, marketApi, iotApi, analyticsApi, fiatApi };

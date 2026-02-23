@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"los-tecnicos/backend/internal/blockchain"
+	"los-tecnicos/backend/internal/config"
 	"los-tecnicos/backend/internal/core/domain"
 	"los-tecnicos/backend/internal/database"
 	"los-tecnicos/backend/internal/mqtt"
@@ -98,7 +99,25 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 					log.Printf("Match found! Buy: %s, Sell: %s", buyOrder.ID, sellOrder.ID)
 					log.Printf("Settlement Price: %f (Dynamic) vs %f (Ask)", dynamicPrice, sellOrder.TokenPrice)
 
-					// 3. Match found - Execute Transaction
+					// 3. Match found - Execute Transaction on Blockchain FIRST
+					log.Printf(">>> PRE-SETTLEMENT: Attempting to settle match on Soroban Testnet...")
+
+					// Build the Oracle XDR to call match_orders on the Marketplace contract
+					contractID := config.GetEnv("MARKETPLACE_CONTRACT_ID", "")
+					if contractID != "" {
+						payloadBytes := []byte("marketplace_match")
+						// Trigger the actual transaction
+						txHash, err := sorobanClient.TriggerContractCall(contractID, "match_orders", sellOrder.ID, payloadBytes)
+						if err != nil {
+							log.Printf(">>> BLOCKCHAIN ERROR: Failed to match orders on-chain: %v", err)
+							continue // Skip DB commit if blockchain fails
+						}
+						log.Printf(">>> BLOCKCHAIN SUCCESS: Soroban Testnet verified match! TxHash: %s", txHash)
+					} else {
+						log.Printf(">>> WARNING: MARKETPLACE_CONTRACT_ID not set! Proceeding with offline DB-only settlement (Dev Mode).")
+					}
+
+					// 4. Update Database only AFTER Blockchain success (or Dev Mode continuation)
 					dbErr := database.DB.Transaction(func(tx *gorm.DB) error {
 						// Update orders
 						if err := tx.Model(&buyOrder).Update("status", "Matched").Error; err != nil {
@@ -110,12 +129,12 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 
 						// Create transaction record
 						transaction := domain.Transaction{
-							ID:             "txn_" + buyOrder.ID, // Simple TXN id for now
+							ID:             "txn_" + buyOrder.ID,
 							DonorID:        sellOrder.UserID,
 							RecipientID:    buyOrder.UserID,
 							KwhAmount:      buyOrder.KwhAmount,
-							TokenAmount:    buyOrder.KwhAmount * dynamicPrice, // Trade happens at DYNAMIC price
-							BlockchainHash: "pending_" + "txn_" + buyOrder.ID,
+							TokenAmount:    buyOrder.KwhAmount * dynamicPrice,
+							BlockchainHash: "soroban_" + "txn_" + buyOrder.ID,
 							Status:         "Pending",
 							Timestamp:      time.Now(),
 						}
@@ -124,8 +143,6 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						}
 
 						// --- DEFI YIELD ACCRUAL (Persistence) ---
-						// If the order sat for a while, they earned yield.
-						// Simulating "Instant" yield for the demo.
 						yieldAmount := buyOrder.KwhAmount * dynamicPrice * 0.05 / 365
 						yieldRecord := domain.YieldRecord{
 							UserID:    sellOrder.UserID,
@@ -135,12 +152,11 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						}
 						if err := tx.Create(&yieldRecord).Error; err != nil {
 							log.Printf("Failed to persist yield: %v", err)
-							// Don't fail the trade for yield error, just log it
 						}
 						log.Printf(">>> DEFI: Persisted Yield Record of %.6f XLM for User %s", yieldAmount, sellOrder.UserID)
 
-						// --- TOKEN BURN: Consumed energy → tokens destroyed ---
-						tokensBurned := buyOrder.KwhAmount * 1000 // 1 kWh = 1000 LT
+						// --- TOKEN BURN ---
+						tokensBurned := buyOrder.KwhAmount * 1000
 						burnRecord := domain.TokenBurn{
 							OrderID:      buyOrder.ID,
 							TokensBurned: tokensBurned,
@@ -151,9 +167,9 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						if err := tx.Create(&burnRecord).Error; err != nil {
 							log.Printf("Failed to persist burn: %v", err)
 						}
-						log.Printf(">>> BURN: 🔥 %.0f LT tokens burned (%.4f kWh consumed by %s)", tokensBurned, buyOrder.KwhAmount, buyOrder.UserID)
+						log.Printf(">>> BURN: 🔥 %.0f LT tokens burned (%.4f kWh consumed)", tokensBurned, buyOrder.KwhAmount)
 
-						// --- TRADE FEE → LP STAKERS (2.5% commission) ---
+						// --- TRADE FEE ---
 						tradeFee := buyOrder.KwhAmount * dynamicPrice * 0.025
 						lpYield := domain.YieldRecord{
 							UserID:    "liquidity_pool",
@@ -164,10 +180,9 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						if err := tx.Create(&lpYield).Error; err != nil {
 							log.Printf("Failed to persist LP yield: %v", err)
 						}
-						log.Printf(">>> REVENUE: 💰 %.4f XLM trade fee → LP pool", tradeFee)
 
-						// --- CARBON CREDIT from trade ---
-						co2Saved := buyOrder.KwhAmount * 0.82 // India grid emission factor
+						// --- CARBON CREDIT ---
+						co2Saved := buyOrder.KwhAmount * 0.82
 						carbonCredit := domain.CarbonCredit{
 							DeviceID:    "marketplace",
 							KwhOffset:   buyOrder.KwhAmount,
@@ -178,8 +193,6 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						if err := tx.Create(&carbonCredit).Error; err != nil {
 							log.Printf("Failed to persist carbon credit: %v", err)
 						}
-						log.Printf(">>> CARBON: 🌱 %.3f kg CO₂ saved from %.4f kWh P2P trade", co2Saved, buyOrder.KwhAmount)
-						// ----------------------------------------
 
 						return nil
 					})
@@ -189,7 +202,7 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 						continue
 					}
 
-					// 4. COORDINATION: Send lock command to donor's IoT device
+					// 5. COORDINATION: Send lock command to donor's IoT device
 					var device domain.IoTDevice
 					if err := database.DB.Where("owner_id = ? AND device_type = ?", sellOrder.UserID, "esp32").First(&device).Error; err == nil {
 						log.Printf("Sending lock command to device: %s", device.ID)
@@ -197,10 +210,6 @@ func matchOrders(sorobanClient *blockchain.SorobanClient) {
 					} else {
 						log.Printf("No ESP32 device found for donor %s, skipping IoT lock simulation", sellOrder.UserID)
 					}
-
-					// Trigger blockchain execution (asynchronously)
-					// Note: Real Soroban implementation would need to authorize this specific amount.
-					go sorobanClient.HandleTradeExecution(buyOrder)
 
 					// Break inner loop to move to next sell order
 					break

@@ -52,7 +52,7 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 	router.Use(handlers.AuditMiddleware())
-	router.Use(handlers.RateLimiter(1000, time.Minute))
+	router.Use(handlers.RateLimiter(10000, time.Minute))
 
 	// A simple health check endpoint
 	router.GET("/ping", func(c *gin.Context) {

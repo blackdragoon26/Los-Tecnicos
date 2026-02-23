@@ -86,21 +86,40 @@ func HandleEnergyReport(c *gin.Context) {
 	// ─── Trigger Soroban mint (calls energy_token.mint) ───
 	txHash := "mint_" + time.Now().Format("20060102_150405")
 	contractID := config.GetEnv("TOKEN_CONTRACT_ID", "")
-	if contractID != "" {
+
+	// Default to SenderUID if wallet mapping fails
+	ownerWallet := req.SenderUID
+
+	// 1. Try to find owner wallet by the specific Node UID (Virtual Device Linking)
+	var depinNode domain.DePINNode
+	if err := database.DB.Where("device_id = ?", req.SenderUID).First(&depinNode).Error; err == nil && depinNode.OperatorWallet != "" {
+		ownerWallet = depinNode.OperatorWallet
+		log.Printf("[MINT] Found linked wallet %s for node %s", ownerWallet, req.SenderUID)
+	} else if err := database.DB.Where("device_id = ?", req.DeviceID).First(&depinNode).Error; err == nil && depinNode.OperatorWallet != "" {
+		// 2. Fallback to root DeviceID
+		ownerWallet = depinNode.OperatorWallet
+		log.Printf("[MINT] Found linked wallet %s for root device %s", ownerWallet, req.DeviceID)
+	} else {
+		log.Printf("[MINT] ⚠️ No wallet linked for node %s or device %s. Using UID as fallback.", req.SenderUID, req.DeviceID)
+	}
+
+	// Trigger Soroban mint if contract is configured
+	if contractID != "" && ownerWallet != "" && ownerWallet != req.SenderUID {
 		rpcURL := config.GetEnv("SOROBAN_RPC_URL", "https://soroban-testnet.stellar.org:443")
 		client := blockchain.NewSorobanClient(rpcURL)
-		hash, err := client.TriggerContractCall(contractID, "mint", req.SenderUID, []byte(fmt.Sprintf(`{"amount":%f}`, tokensMinted)))
+		hash, err := client.MintTokens(ownerWallet, tokensMinted)
 		if err != nil {
 			log.Printf("[MINT] ⚠️ Soroban mint call failed: %v (continuing with local record)", err)
 		} else {
 			txHash = hash
+			log.Printf("[MINT] ✨ Successfully minted on Soroban to wallet %s", ownerWallet)
 		}
 	}
 
 	// ─── Record the mint ───
 	mint := domain.EnergyMint{
 		DeviceID:        req.DeviceID,
-		SenderUID:       req.SenderUID,
+		SenderUID:       ownerWallet, // Mapped to wallet
 		ReceiverUID:     req.ReceiverUID,
 		KwhTransferred:  req.KwhTransferred,
 		TokensMinted:    tokensMinted,
@@ -115,7 +134,7 @@ func HandleEnergyReport(c *gin.Context) {
 	database.DB.Create(&mint)
 
 	log.Printf("[MINT] ⚡ Minted %.2f LT tokens for %s (%.4f kWh, quality=%.2f)",
-		tokensMinted, req.SenderUID, req.KwhTransferred, qualityFactor)
+		tokensMinted, ownerWallet, req.KwhTransferred, qualityFactor)
 
 	// ─── Auto-create sell order on marketplace ───
 	pe := pricing.NewPricingEngine()
@@ -126,7 +145,7 @@ func HandleEnergyReport(c *gin.Context) {
 
 	sellOrder := domain.EnergyOrder{
 		ID:         fmt.Sprintf("auto_sell_%d", mint.ID),
-		UserID:     req.SenderUID, // In production, map to wallet address
+		UserID:     ownerWallet, // Assigned to the web3 wallet instead of raw node UID
 		Type:       "sell",
 		KwhAmount:  req.KwhTransferred,
 		TokenPrice: dynamicPrice,

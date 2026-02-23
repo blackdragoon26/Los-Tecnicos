@@ -20,6 +20,7 @@ import Onboarding from "@/pages/Onboarding";
 import DebugTransfer from "@/pages/DebugTransfer";
 import About from "@/pages/About";
 import NotFound from "@/pages/NotFound";
+import RegisterDevice from "@/pages/RegisterDevice";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,10 @@ const App = () => (
             <Route
               path="/marketplace"
               element={<ProtectedRoute><Marketplace /></ProtectedRoute>}
+            />
+            <Route
+              path="/device/register"
+              element={<ProtectedRoute><RegisterDevice /></ProtectedRoute>}
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

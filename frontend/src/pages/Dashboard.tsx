@@ -2,9 +2,9 @@ import { useWallet } from "@/contexts/WalletContext";
 import { useEffect, useState } from "react";
 import {
   ArrowUpRight, ArrowDownLeft, TrendingUp, Users, ShoppingCart,
-  Globe, History, ChevronRight, Battery, ArrowRight,
+  Globe, History, ChevronRight, Battery, ArrowRight, CreditCard, CheckCircle2
 } from "lucide-react";
-import { analyticsApi } from "@/lib/api";
+import { analyticsApi, fiatApi, iotApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,7 +18,70 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+
+function TopUpFiatButton({ walletAddress }: { walletAddress: string }) {
+  const [amount, setAmount] = useState("100");
+  const [loading, setLoading] = useState(false);
+
+  const handleTopUp = async () => {
+    if (!amount || isNaN(Number(amount))) return;
+    try {
+      setLoading(true);
+      const res = await fiatApi.createCheckout(walletAddress, Number(amount));
+      if (res.checkout_url) {
+        toast.info("Redirecting to Dodo Payments...");
+        setTimeout(() => {
+          window.location.href = res.checkout_url;
+        }, 500);
+      } else {
+        toast.error("Failed to generate checkout link");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initiate top-up");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="default" className="h-8 text-xs gap-1.5 px-3 bg-primary hover:bg-primary/90 text-white">
+          <CreditCard className="w-3.5 h-3.5" /> Top Up LT
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Buy Energy Tokens (LT)</DialogTitle>
+          <DialogDescription className="text-xs">
+            Purchase LT tokens with Fiat to buy energy on the marketplace.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label className="text-xs">Amount (LT)</Label>
+            <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="10" />
+            <p className="text-[10px] text-muted-foreground pt-0.5">Total: ${(Number(amount) * 0.05).toFixed(2)} USD</p>
+          </div>
+          <Button onClick={handleTopUp} disabled={loading || Number(amount) < 10} className="w-full text-xs bg-primary hover:bg-primary/90">
+            {loading ? "Generating Link..." : "Checkout via Dodo Payments"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -33,6 +96,34 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 function DonorView({ stats, transactions }: { stats: any; transactions: any[] }) {
+  const [nodes, setNodes] = useState<any[]>([]);
+  const [hasLinkedDevice, setHasLinkedDevice] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchNodes = async () => {
+      try {
+        const devicesRes = await iotApi.getDevices();
+        const devices = devicesRes.data || devicesRes;
+        if (devices && devices.length > 0) {
+          setHasLinkedDevice(true);
+          const deviceId = devices[0].device_id || devices[0].id;
+          const nodesRes = await iotApi.getNodes(deviceId);
+          if (isMounted) {
+            const nodeData = nodesRes.nodes || nodesRes.data || nodesRes;
+            setNodes(Array.isArray(nodeData) ? nodeData : []);
+          }
+        }
+      } catch (err) { }
+    };
+    fetchNodes();
+    const interval = setInterval(fetchNodes, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -46,6 +137,47 @@ function DonorView({ stats, transactions }: { stats: any; transactions: any[] })
         <div className="lg:col-span-2 space-y-5">
           <Card>
             <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Hardware Network</CardTitle>
+              <CardDescription className="text-xs">
+                Link and oversee your physical IoT devices and meters.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                {hasLinkedDevice ? (
+                  <Badge variant="outline" className="h-8 text-[11px] px-3 border-primary/30 text-primary bg-primary/10 gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Hardware Online
+                  </Badge>
+                ) : (
+                  <Link to="/device/register"><Button size="sm" className="text-xs h-8">Link Device</Button></Link>
+                )}
+                <Link to="/network"><Button size="sm" variant="outline" className="text-xs h-8">View Network</Button></Link>
+              </div>
+
+              {nodes && nodes.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Live Connected Nodes</p>
+                  <div className="space-y-1.5 flex flex-col">
+                    {nodes.map(n => (
+                      <div key={n.uid} className="flex items-center justify-between bg-muted/30 px-3 py-2 rounded-md border border-border/30">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full ${n.state === 'IDLE' ? 'bg-primary' : n.state === 'OFFLINE' ? 'bg-destructive' : 'bg-accent animate-pulse'}`} />
+                          <span className="text-xs font-mono font-medium">{n.uid}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
+                          <span>{n.voltage?.toFixed(1) || '0.0'}V</span>
+                          <span className="text-primary flex items-center gap-1"><Battery className="w-3 h-3 text-primary" /> {n.soc?.toFixed(1) || '0.0'}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm">Sell Excess Energy</CardTitle>
               <CardDescription className="text-xs">
                 Distribute stored battery power to the grid and earn XLM rewards.
@@ -53,8 +185,7 @@ function DonorView({ stats, transactions }: { stats: any; transactions: any[] })
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
-                <Link to="/marketplace"><Button size="sm" className="text-xs h-8">Mint Tokens</Button></Link>
-                <Link to="/marketplace"><Button size="sm" variant="outline" className="text-xs h-8">Create Order</Button></Link>
+                <Link to="/marketplace"><Button size="sm" className="text-xs h-8">Marketplace</Button></Link>
               </div>
             </CardContent>
           </Card>
@@ -243,7 +374,7 @@ export default function Dashboard() {
         ]);
         setStats(statsRes.data ?? statsRes);
         setTransactions((txRes as any).data ?? txRes ?? []);
-      } catch {}
+      } catch { }
     };
     fetchData();
   }, [user]);
@@ -293,11 +424,14 @@ export default function Dashboard() {
               {walletDisplay}
             </p>
           </div>
-          {!isAdmin && (
-            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-10 hover:opacity-100" onClick={enableAdmin}>
-              <span className="text-[10px]">🔧</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <TopUpFiatButton walletAddress={user?.wallet_address || publicKey} />
+            {!isAdmin && (
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-10 hover:opacity-100" onClick={enableAdmin}>
+                <span className="text-[10px]">🔧</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeRole} onValueChange={(v) => { setActiveRole(v as "donor" | "recipient" | "operator"); setRole(v as "donor" | "recipient" | "operator"); }}>
@@ -323,7 +457,7 @@ export default function Dashboard() {
 function AdminPanel() {
   const [data, setData] = useState<any>(null);
   useEffect(() => {
-    analyticsApi.getDashboard().then((d) => setData(d)).catch(() => {});
+    analyticsApi.getDashboard().then((d) => setData(d)).catch(() => { });
   }, []);
 
   return (

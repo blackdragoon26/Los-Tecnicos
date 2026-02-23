@@ -264,3 +264,207 @@ func (c *SorobanClient) HandleTradeExecution(order domain.EnergyOrder) {
 		log.Printf(">>> BLOCKCHAIN: Trade %s Finalized with Status: %s", order.ID, status)
 	}()
 }
+
+// SponsorAndSubmitTransaction takes a user-signed XDR payload, wraps it in a fee-bumping transaction
+// paid for by the Oracle Admin account, and submits it to the Soroban RPC endpoint.
+func (c *SorobanClient) SponsorAndSubmitTransaction(signedXDR string) (string, error) {
+	log.Println(">>> BLOCKCHAIN: Sponsoring and Submitting User Transaction")
+
+	// 1. Decode original user transaction
+	var envelope xdr.TransactionEnvelope
+	err := xdr.SafeUnmarshalBase64(signedXDR, &envelope)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode user XDR: %v", err)
+	}
+
+	genericTx, err := txnbuild.TransactionFromXDR(signedXDR)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse generic transaction: %v", err)
+	}
+
+	tx, ok := genericTx.Transaction()
+	if !ok {
+		return "", fmt.Errorf("expected standard transaction, not fee bump")
+	}
+
+	// 2. Wrap in FeeBumpTransaction sponsored by Oracle (Admin)
+	feeBumpTx, err := txnbuild.NewFeeBumpTransaction(
+		txnbuild.FeeBumpTransactionParams{
+			Inner:      tx,
+			FeeAccount: c.OracleKP.Address(),
+			BaseFee:    txnbuild.MinBaseFee, // Use minimum, or calculate dynamically
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to build fee bump wrapper: %v", err)
+	}
+
+	// 3. Admin Signs the FeeBump
+	feeBumpTx, err = feeBumpTx.Sign(network.TestNetworkPassphrase, c.OracleKP)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign fee bump transaction: %v", err)
+	}
+
+	// 4. Convert to base64 XDR for RPC submission
+	finalXDR, err := feeBumpTx.Base64()
+	if err != nil {
+		return "", fmt.Errorf("failed to encode final transaction: %v", err)
+	}
+
+	// 5. Submit to RPC
+	// sendTransaction is the standard Soroban RPC method
+	params := map[string]string{
+		"transaction": finalXDR,
+	}
+	result, err := c.sendRPC("sendTransaction", params)
+	if err != nil {
+		return "", fmt.Errorf("rpc sendTransaction failed: %v", err)
+	}
+
+	// Parse RPC response
+	var sendResp struct {
+		Status string `json:"status"`
+		Hash   string `json:"hash"`
+		Error  string `json:"errorResultXdr"`
+	}
+	if err := json.Unmarshal(result, &sendResp); err != nil {
+		return "", fmt.Errorf("failed to parse rpc response: %v", err)
+	}
+
+	if sendResp.Status == "ERROR" {
+		return "", fmt.Errorf("soroban transaction failed: %s", sendResp.Error)
+	}
+
+	log.Printf(">>> BLOCKCHAIN: Sponsored Transaction Submitted! Hash: %s", sendResp.Hash)
+
+	// Optional: Fire a monitor routine to watch it via getTransaction
+	go func() {
+		status, _ := c.MonitorTransaction(sendResp.Hash)
+		log.Printf(">>> BLOCKCHAIN: Sponsored Tx %s Status: %s", sendResp.Hash, status)
+	}()
+
+	return sendResp.Hash, nil
+}
+
+// MintTokens mints LT tokens directly to a user's web3 wallet on the Soroban Testnet
+func (c *SorobanClient) MintTokens(walletAddress string, amount float64) (string, error) {
+	log.Printf(">>> BLOCKCHAIN: Submitting Mint for %.2f LT to %s", amount, walletAddress)
+
+	contractID := config.GetEnv("TOKEN_CONTRACT_ID", "")
+	if contractID == "" {
+		return "", fmt.Errorf("TOKEN_CONTRACT_ID not set")
+	}
+
+	contractBytes, err := strkey.Decode(strkey.VersionByteContract, contractID)
+	if err != nil {
+		return "", fmt.Errorf("invalid token contract id: %v", err)
+	}
+	var contractHash xdr.Hash
+	copy(contractHash[:], contractBytes)
+	contractIDHash := xdr.ContractId(contractHash)
+
+	scAddress := xdr.ScAddress{
+		Type:       xdr.ScAddressTypeScAddressTypeContract,
+		ContractId: &contractIDHash,
+	}
+
+	// Address to mint to
+	var accountHash xdr.Hash
+	walletBytes, err := strkey.Decode(strkey.VersionByteAccountID, walletAddress)
+	if err != nil {
+		return "", fmt.Errorf("invalid wallet address: %v", err)
+	}
+	copy(accountHash[:], walletBytes)
+	hashValue := xdr.Uint256(accountHash)
+	accountId := xdr.AccountId(xdr.PublicKey{
+		Type:    xdr.PublicKeyTypePublicKeyTypeEd25519,
+		Ed25519: &hashValue,
+	})
+	toAddress := xdr.ScAddress{
+		Type:      xdr.ScAddressTypeScAddressTypeAccount,
+		AccountId: &accountId,
+	}
+
+	// Function: mint(to: Address, amount: i128)
+	args := []xdr.ScVal{
+		{
+			Type:    xdr.ScValTypeScvAddress,
+			Address: &toAddress,
+		},
+		{
+			// Cast the amount (kWh * 1000 = LT) to i128 representing units
+			Type: xdr.ScValTypeScvI128,
+			I128: &xdr.Int128Parts{
+				Hi: 0,
+				Lo: xdr.Uint64(int64(amount)),
+			},
+		},
+	}
+
+	invokeArgs := xdr.InvokeContractArgs{
+		ContractAddress: scAddress,
+		FunctionName:    xdr.ScSymbol("mint"),
+		Args:            args,
+	}
+
+	// Construct InvokeHostFunction operation
+	op := &txnbuild.InvokeHostFunction{
+		HostFunction: xdr.HostFunction{
+			Type:           xdr.HostFunctionTypeHostFunctionTypeInvokeContract,
+			InvokeContract: &invokeArgs,
+		},
+		SourceAccount: c.OracleKP.Address(),
+	}
+
+	// 1. Build Base Transaction
+	tx, err := txnbuild.NewTransaction(
+		txnbuild.TransactionParams{
+			SourceAccount: &txnbuild.SimpleAccount{
+				AccountID: c.OracleKP.Address(),
+				// sequence number usually fetched from network, hardcoded for bypass / MVP mock logic if RPC not strictly enforcing seq
+				Sequence: 1,
+			},
+			IncrementSequenceNum: false, // For safety in this MVP layer
+			Operations:           []txnbuild.Operation{op},
+			BaseFee:              txnbuild.MinBaseFee,
+			Preconditions:        txnbuild.Preconditions{TimeBounds: txnbuild.NewInfiniteTimeout()}, // simplistic
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to build mint tx: %v", err)
+	}
+
+	// 2. Sign Transaction with Admin Key
+	tx, err = tx.Sign(network.TestNetworkPassphrase, c.OracleKP)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign mint tx: %v", err)
+	}
+
+	// 3. Serialize and submit
+	b64, err := tx.Base64()
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize mint tx: %v", err)
+	}
+
+	params := map[string]string{
+		"transaction": b64,
+	}
+	result, err := c.sendRPC("sendTransaction", params)
+	if err != nil {
+		return "", fmt.Errorf("rpc sendTransaction failed: %v", err)
+	}
+
+	var sendResp struct {
+		Status string `json:"status"`
+		Hash   string `json:"hash"`
+		Error  string `json:"errorResultXdr"`
+	}
+	_ = json.Unmarshal(result, &sendResp)
+
+	if sendResp.Status == "ERROR" {
+		return "", fmt.Errorf("soroban mint transaction failed")
+	}
+
+	log.Printf(">>> BLOCKCHAIN: Mint Successful! TxHash: %s", sendResp.Hash)
+	return sendResp.Hash, nil
+}

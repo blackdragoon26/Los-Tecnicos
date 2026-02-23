@@ -75,6 +75,13 @@ func SetupRoutes(router *gin.Engine) {
 			defi.GET("/yield/history", GetYieldHistory)
 		}
 
+		// ─── Public Fiat On-Ramp (Dodo Payments) ───
+		fiat := v1.Group("/fiat")
+		{
+			fiat.POST("/checkout", CreateFiatCheckout)
+			fiat.POST("/webhook", HandleFiatWebhook)
+		}
+
 		// Protected routes
 		protected := v1.Group("/")
 		protected.Use(AuthMiddleware())
@@ -94,6 +101,7 @@ func SetupRoutes(router *gin.Engine) {
 			{
 				iot.GET("/devices", GetRegisteredDevices)
 				iot.POST("/device/register", RegisterDevice)
+				iot.POST("/device/link", HandleLinkIoTDevice) // Cryptographic node linking
 			}
 
 			// Network routes

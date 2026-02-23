@@ -40,11 +40,18 @@ func HandleGetNodes(c *gin.Context) {
 	staleThreshold := time.Now().Add(-2 * time.Minute)
 
 	var nodes []domain.NodeDetail
-	database.DB.Where("device_id = ? AND updated_at > ?", deviceID, staleThreshold).Find(&nodes)
+	// Virtual Node Linking: allow deviceID to be either the root Pi ID OR a specific node UID
+	database.DB.Where("(device_id = ? OR uid = ?) AND updated_at > ?", deviceID, deviceID, staleThreshold).Find(&nodes)
 
-	// Get current schedule commands
+	// If deviceID is a virtual node, resolve the physical parent for command lookup
+	physicalDeviceID := deviceID
+	if len(nodes) > 0 && nodes[0].DeviceID != "" {
+		physicalDeviceID = nodes[0].DeviceID
+	}
+
+	// Get current schedule commands using the physical device ID
 	var commands []domain.ScheduleCommand
-	database.DB.Where("device_id = ?", deviceID).Find(&commands)
+	database.DB.Where("device_id = ?", physicalDeviceID).Find(&commands)
 
 	// Build command map
 	cmdMap := make(map[string]string)
@@ -203,6 +210,14 @@ func HandleTransferStop(c *gin.Context) {
 // ──────────────────────────────────────────────────────────────
 
 func upsertScheduleCommand(deviceID, nodeUID, action, reason string, now time.Time) {
+	// Virtual Node Linking: If deviceID is actually a node UID, resolve the real physical DeviceID (the Pi)
+	// so the Pi picks up the command during its polling cycle.
+	var nodeInfo domain.NodeDetail
+	if err := database.DB.Where("uid = ?", deviceID).First(&nodeInfo).Error; err == nil {
+		log.Printf("[SCHED] Mapping virtual device %s to physical host %s", deviceID, nodeInfo.DeviceID)
+		deviceID = nodeInfo.DeviceID
+	}
+
 	var existing domain.ScheduleCommand
 	err := database.DB.Where("device_id = ? AND node_uid = ?", deviceID, nodeUID).First(&existing).Error
 	if err != nil {

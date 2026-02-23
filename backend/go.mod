@@ -3,6 +3,7 @@ module los-tecnicos/backend
 go 1.24.0
 
 require (
+	github.com/dodopayments/dodopayments-go v1.84.0
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -10,6 +11,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/gtank/ristretto255 v0.2.0
 	github.com/redis/go-redis/v9 v9.17.3
+	github.com/standard-webhooks/standard-webhooks/libraries v0.0.0-20260218190227-a1773d7ffc57
 	github.com/stellar/go v0.0.0-20251210100531-aab2ea4aca88
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -48,6 +50,10 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/stellar/go-xdr v0.0.0-20231122183749-b53fb00bcac2 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.uber.org/mock v0.6.0 // indirect

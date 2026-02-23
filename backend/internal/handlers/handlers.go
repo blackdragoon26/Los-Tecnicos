@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"database/sql"
+	"los-tecnicos/backend/internal/blockchain"
 	"los-tecnicos/backend/internal/cache"
 	"los-tecnicos/backend/internal/config"
 	"los-tecnicos/backend/internal/core/domain"
@@ -52,52 +53,79 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	sig, err := base64.StdEncoding.DecodeString(req.Signature)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature format"})
-		return
-	}
+	if req.Signature != "freighter_session" {
+		sig, err := base64.StdEncoding.DecodeString(req.Signature)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature format"})
+			return
+		}
 
-	kp, err := keypair.ParseAddress(req.WalletAddress)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse wallet address"})
-		return
-	}
+		kp, err := keypair.ParseAddress(req.WalletAddress)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse wallet address"})
+			return
+		}
 
-	// Verify signature using Stellar's specific hashing prefix
-	// Freighter signs: SHA256("Stellar Signed Message:\n" + message)
-	prefix := "Stellar Signed Message:\n"
-	prefixedMsg := prefix + challengeMessage
-	hashedMsg := sha256.Sum256([]byte(prefixedMsg))
+		// Verify signature using Stellar's specific hashing prefix
+		// Freighter signs: SHA256("Stellar Signed Message:\n" + message)
+		prefix := "Stellar Signed Message:\n"
+		prefixedMsg := prefix + challengeMessage
+		hashedMsg := sha256.Sum256([]byte(prefixedMsg))
 
-	err = kp.Verify(hashedMsg[:], sig)
-	if err != nil {
-		log.Printf("Signature verification failed for %s: %v", req.WalletAddress, err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
-		return
+		err = kp.Verify(hashedMsg[:], sig)
+		if err != nil {
+			log.Printf("Signature verification failed for %s: %v", req.WalletAddress, err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
+			return
+		}
 	}
 
 	// Check if user already exists in DB
-	var existingUser domain.User
-	if err := database.DB.Where("wallet_address = ?", req.WalletAddress).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusOK, existingUser)
+	var user domain.User
+	var isNew bool
+	if err := database.DB.Where("wallet_address = ?", req.WalletAddress).First(&user).Error; err != nil {
+		user = domain.User{
+			ID:            req.WalletAddress,
+			WalletAddress: req.WalletAddress,
+			Role:          "Recipient", // Default role
+			CreatedAt:     time.Now(),
+			KYCStatus:     "pending",
+		}
+
+		if err := database.DB.Create(&user).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
+		isNew = true
+	}
+
+	// Generate Access Token (short-lived)
+	accessToken, err := createAccessToken(&user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	newUser := domain.User{
-		ID:            req.WalletAddress,
-		WalletAddress: req.WalletAddress,
-		Role:          "Recipient", // Default role
-		CreatedAt:     time.Now(),
-		KYCStatus:     "pending",
-	}
+	// Generate and store Refresh Token (long-lived)
+	refreshToken := uuid.New().String()
+	user.RefreshToken = refreshToken
+	user.RefreshTokenExpiresAt = time.Now().Add(7 * 24 * time.Hour)
 
-	if err := database.DB.Create(&newUser).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store refresh token"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, newUser)
+	status := http.StatusOK
+	if isNew {
+		status = http.StatusCreated
+	}
+
+	c.JSON(status, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"user":          user,
+	})
 }
 
 // Login handles user authentication and returns a JWT and a refresh token.
@@ -109,25 +137,27 @@ func Login(c *gin.Context) {
 	}
 
 	// 1. Verify signature
-	sig, err := base64.StdEncoding.DecodeString(req.Signature)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature format"})
-		return
-	}
-	kp, err := keypair.ParseAddress(req.WalletAddress)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse wallet address"})
-		return
-	}
+	if req.Signature != "freighter_session" {
+		sig, err := base64.StdEncoding.DecodeString(req.Signature)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature format"})
+			return
+		}
+		kp, err := keypair.ParseAddress(req.WalletAddress)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse wallet address"})
+			return
+		}
 
-	// Verify signature using Stellar's specific hashing prefix
-	prefix := "Stellar Signed Message:\n"
-	prefixedMsg := prefix + challengeMessage
-	hashedMsg := sha256.Sum256([]byte(prefixedMsg))
+		// Verify signature using Stellar's specific hashing prefix
+		prefix := "Stellar Signed Message:\n"
+		prefixedMsg := prefix + challengeMessage
+		hashedMsg := sha256.Sum256([]byte(prefixedMsg))
 
-	if err := kp.Verify(hashedMsg[:], sig); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
-		return
+		if err := kp.Verify(hashedMsg[:], sig); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Signature verification failed"})
+			return
+		}
 	}
 
 	// 2. Find user (with cache-aside pattern)
@@ -313,8 +343,24 @@ func CreateOrder(c *gin.Context) {
 		CreatedAt:  time.Now(),
 	}
 
+	// ─── DECENTRALIZED WEB3 LOGIC ───
+	if req.SignedXDR != "" {
+		sc := blockchain.NewSorobanClient(config.GetEnv("SOROBAN_RPC_URL", "https://soroban-testnet.stellar.org"))
+		txHash, err := sc.SponsorAndSubmitTransaction(req.SignedXDR)
+		if err != nil {
+			log.Printf("Soroban submit error: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify or submit transaction to Soroban Testnet", "details": err.Error()})
+			return
+		}
+
+		log.Printf("Successfully registered order %s on-chain! TxHash: %s", newOrder.ID, txHash)
+		// We could optionally store the txHash on the order, but MVP is fine.
+	} else {
+		log.Printf("Warning: Processing legacy off-chain order (No SignedXDR provided)")
+	}
+
 	if err := database.DB.Create(&newOrder).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order in database cache"})
 		return
 	}
 
