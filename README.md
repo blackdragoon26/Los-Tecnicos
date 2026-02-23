@@ -4,7 +4,7 @@
 
 
 ---
-Link to frontend -https://los-tecnicos-frontend.vercel.app/
+Link to frontend -https://los-tecnicos.vercel.app/
 
 Docs https://stelltron-docs.vercel.app/
 
