@@ -1,0 +1,28 @@
+{
+  "id": "defi/defi-overview",
+  "title": "DeFi Protocol",
+  "description": "Stelltron builds a DeFi layer on top of physical energy trading. Participants earn yield by providing liquidity, borrowing tokens for arbitrage, and capturing trade commissions.",
+  "source": "@site/docs/defi/overview.md",
+  "sourceDirName": "defi",
+  "slug": "/defi/defi-overview",
+  "permalink": "/defi/defi-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/defi/overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "defi-overview",
+    "title": "DeFi Protocol",
+    "sidebar_label": "DeFi Protocol"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/contracts/contracts-overview"
+  },
+  "next": {
+    "title": "Overview",
+    "permalink": "/api/api-overview"
+  }
+}

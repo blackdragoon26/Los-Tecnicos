@@ -1,0 +1,25 @@
+{
+  "id": "intro",
+  "title": "Stelltron",
+  "description": "Peer-to-peer solar energy trading on the Stellar blockchain.",
+  "source": "@site/docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/",
+  "permalink": "/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/intro.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "intro",
+    "title": "Stelltron",
+    "sidebar_label": "Overview",
+    "slug": "/"
+  },
+  "sidebar": "docs",
+  "next": {
+    "title": "Quickstart",
+    "permalink": "/getting-started/quickstart"
+  }
+}

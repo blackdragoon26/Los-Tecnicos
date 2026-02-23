@@ -1,0 +1,28 @@
+{
+  "id": "algorithms/dynamic-pricing",
+  "title": "Dynamic Pricing Engine",
+  "description": "The pricing engine calculates a fair, real-time price for every energy trade. It replaces arbitrary utility tariffs with a multi-factor model driven by actual market conditions. The coefficients can be adjusted by community governance.",
+  "source": "@site/docs/algorithms/dynamic-pricing.md",
+  "sourceDirName": "algorithms",
+  "slug": "/algorithms/dynamic-pricing",
+  "permalink": "/algorithms/dynamic-pricing",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/algorithms/dynamic-pricing.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "dynamic-pricing",
+    "title": "Dynamic Pricing Engine",
+    "sidebar_label": "Dynamic Pricing"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Business Flow",
+    "permalink": "/architecture/business-flow"
+  },
+  "next": {
+    "title": "Matching Engine",
+    "permalink": "/algorithms/matching-engine"
+  }
+}

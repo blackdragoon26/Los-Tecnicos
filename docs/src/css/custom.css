@@ -1,0 +1,69 @@
+/* Stelltron Docs — Custom CSS */
+
+:root {
+  --ifm-color-primary: #7c3aed;
+  --ifm-color-primary-dark: #6d28d9;
+  --ifm-color-primary-darker: #5b21b6;
+  --ifm-color-primary-darkest: #4c1d95;
+  --ifm-color-primary-light: #8b5cf6;
+  --ifm-color-primary-lighter: #a78bfa;
+  --ifm-color-primary-lightest: #c4b5fd;
+
+  --ifm-code-font-size: 92%;
+  --docusaurus-highlighted-code-line-bg: rgba(124, 58, 237, 0.1);
+
+  --ifm-font-family-base: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ifm-heading-font-weight: 600;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #a78bfa;
+  --ifm-color-primary-dark: #8b5cf6;
+  --ifm-color-primary-darker: #7c3aed;
+  --ifm-color-primary-darkest: #6d28d9;
+  --ifm-color-primary-light: #c4b5fd;
+  --ifm-color-primary-lighter: #ddd6fe;
+  --ifm-color-primary-lightest: #ede9fe;
+  --ifm-background-color: #0f0f1a;
+  --ifm-navbar-background-color: #0f0f1a;
+  --docusaurus-highlighted-code-line-bg: rgba(167, 139, 250, 0.15);
+}
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+}
+
+/* Navbar */
+.navbar {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+/* Tables */
+table {
+  display: table;
+  width: 100%;
+}
+
+/* PlantUML code blocks — give them a distinct style */
+.language-plantuml {
+  background: #1a1a2e;
+  border-left: 3px solid var(--ifm-color-primary);
+}
+
+[data-theme='light'] .language-plantuml {
+  background: #f5f3ff;
+  border-left: 3px solid var(--ifm-color-primary);
+}
+
+/* Hero banner on homepage */
+.hero--primary {
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a0533 100%);
+}
+
+/* Admonition tweaks */
+.admonition {
+  border-radius: 6px;
+}

@@ -1,0 +1,28 @@
+{
+  "id": "iot/iot-overview",
+  "title": "IoT Layer",
+  "description": "The physical layer consists of ESP32 microcontrollers managing actual battery-to-battery energy transfer, orchestrated by a Raspberry Pi 4B acting as a local edge gateway. The Pi handles bidirectional communication between the hardware relay circuit and the cloud backend.",
+  "source": "@site/docs/iot/overview.md",
+  "sourceDirName": "iot",
+  "slug": "/iot/iot-overview",
+  "permalink": "/iot/iot-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/iot/overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "iot-overview",
+    "title": "IoT Layer",
+    "sidebar_label": "Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Zero-Knowledge Proofs",
+    "permalink": "/algorithms/zero-knowledge"
+  },
+  "next": {
+    "title": "Overview",
+    "permalink": "/contracts/contracts-overview"
+  }
+}

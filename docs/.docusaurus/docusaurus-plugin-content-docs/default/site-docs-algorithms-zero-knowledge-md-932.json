@@ -1,0 +1,28 @@
+{
+  "id": "algorithms/zero-knowledge",
+  "title": "Zero-Knowledge Proofs",
+  "description": "Sellers prove they have sufficient battery capacity to fulfill an order — without revealing the exact battery percentage. The matching engine verifies this claim before executing any trade.",
+  "source": "@site/docs/algorithms/zero-knowledge.md",
+  "sourceDirName": "algorithms",
+  "slug": "/algorithms/zero-knowledge",
+  "permalink": "/algorithms/zero-knowledge",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/algorithms/zero-knowledge.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "zero-knowledge",
+    "title": "Zero-Knowledge Proofs",
+    "sidebar_label": "Zero-Knowledge Proofs"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Matching Engine",
+    "permalink": "/algorithms/matching-engine"
+  },
+  "next": {
+    "title": "Overview",
+    "permalink": "/iot/iot-overview"
+  }
+}

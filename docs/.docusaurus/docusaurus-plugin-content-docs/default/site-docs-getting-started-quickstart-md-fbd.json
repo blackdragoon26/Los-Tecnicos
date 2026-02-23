@@ -1,0 +1,28 @@
+{
+  "id": "getting-started/quickstart",
+  "title": "Getting Started",
+  "description": "This guide walks through running the full Stelltron stack locally: smart contracts on Stellar testnet, Go backend, and Next.js frontend.",
+  "source": "@site/docs/getting-started/quickstart.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/quickstart",
+  "permalink": "/getting-started/quickstart",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/getting-started/quickstart.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "quickstart",
+    "title": "Getting Started",
+    "sidebar_label": "Quickstart"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/"
+  },
+  "next": {
+    "title": "System Overview",
+    "permalink": "/architecture/system-overview"
+  }
+}

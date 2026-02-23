@@ -1,0 +1,28 @@
+{
+  "id": "architecture/business-flow",
+  "title": "Business Flow",
+  "description": "A complete walkthrough of the Stelltron business model — from solar production to settled trade to revenue distribution.",
+  "source": "@site/docs/architecture/business-flow.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/business-flow",
+  "permalink": "/architecture/business-flow",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/architecture/business-flow.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "business-flow",
+    "title": "Business Flow",
+    "sidebar_label": "Business Flow"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "System Overview",
+    "permalink": "/architecture/system-overview"
+  },
+  "next": {
+    "title": "Dynamic Pricing",
+    "permalink": "/algorithms/dynamic-pricing"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "algorithms/dynamic-pricing",
+              "path": "/algorithms/dynamic-pricing",
+              "sidebar": "docs"
+            },
+            {
+              "id": "algorithms/matching-engine",
+              "path": "/algorithms/matching-engine",
+              "sidebar": "docs"
+            },
+            {
+              "id": "algorithms/zero-knowledge",
+              "path": "/algorithms/zero-knowledge",
+              "sidebar": "docs"
+            },
+            {
+              "id": "api/api-overview",
+              "path": "/api/api-overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/business-flow",
+              "path": "/architecture/business-flow",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/system-overview",
+              "path": "/architecture/system-overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "contracts/contracts-overview",
+              "path": "/contracts/contracts-overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "defi/defi-overview",
+              "path": "/defi/defi-overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "getting-started/quickstart",
+              "path": "/getting-started/quickstart",
+              "sidebar": "docs"
+            },
+            {
+              "id": "intro",
+              "path": "/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "iot/iot-overview",
+              "path": "/iot/iot-overview",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/",
+                "label": "Overview"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

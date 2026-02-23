@@ -1,0 +1,28 @@
+{
+  "id": "architecture/system-overview",
+  "title": "System Architecture",
+  "description": "Stelltron is a full-stack application spanning physical hardware, an IoT communication layer, a Go backend, a Next.js frontend, and four Soroban smart contracts on Stellar. Every layer has a defined contract with the layers above and below it.",
+  "source": "@site/docs/architecture/system-overview.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/system-overview",
+  "permalink": "/architecture/system-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/architecture/system-overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "system-overview",
+    "title": "System Architecture",
+    "sidebar_label": "System Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Quickstart",
+    "permalink": "/getting-started/quickstart"
+  },
+  "next": {
+    "title": "Business Flow",
+    "permalink": "/architecture/business-flow"
+  }
+}

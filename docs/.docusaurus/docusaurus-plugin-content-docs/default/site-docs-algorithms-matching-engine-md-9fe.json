@@ -1,0 +1,28 @@
+{
+  "id": "algorithms/matching-engine",
+  "title": "Matching Engine",
+  "description": "The matching engine runs as a background goroutine that polls for compatible buy and sell orders every 5 seconds. When a match is found, it sequences through price calculation, ZK verification, database settlement, IoT notification, and Soroban execution — all within a single atomic transaction.",
+  "source": "@site/docs/algorithms/matching-engine.md",
+  "sourceDirName": "algorithms",
+  "slug": "/algorithms/matching-engine",
+  "permalink": "/algorithms/matching-engine",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/algorithms/matching-engine.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "matching-engine",
+    "title": "Matching Engine",
+    "sidebar_label": "Matching Engine"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Dynamic Pricing",
+    "permalink": "/algorithms/dynamic-pricing"
+  },
+  "next": {
+    "title": "Zero-Knowledge Proofs",
+    "permalink": "/algorithms/zero-knowledge"
+  }
+}

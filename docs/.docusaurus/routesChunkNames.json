@@ -1,0 +1,102 @@
+{
+  "/__docusaurus/debug-5ff": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/config-5ba": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/content-a2b": {
+    "__comp": "__comp---theme-debug-contentba-8-ce7",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    },
+    "__props": "__props---docusaurus-debug-content-3-c-0-be2"
+  },
+  "/__docusaurus/debug/globalData-c3c": {
+    "__comp": "__comp---theme-debug-global-dataede-0fa",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/metadata-156": {
+    "__comp": "__comp---theme-debug-site-metadata-68-e-3d4",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/registry-88c": {
+    "__comp": "__comp---theme-debug-registry-679-501",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/__docusaurus/debug/routes-000": {
+    "__comp": "__comp---theme-debug-routes-946-699",
+    "__context": {
+      "plugin": "plugin---docusaurus-debugb-38-ad3"
+    }
+  },
+  "/-105": {
+    "__comp": "__comp---theme-docs-root-5-e-9-0b6",
+    "__context": {
+      "plugin": "plugin---aba-d70"
+    }
+  },
+  "/-c8a": {
+    "__comp": "__comp---theme-doc-version-roota-7-b-5de",
+    "__props": "__props---22-d-307"
+  },
+  "/-097": {
+    "__comp": "__comp---theme-doc-roota-94-67a"
+  },
+  "/algorithms/dynamic-pricing-6cc": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---algorithms-dynamic-pricingb-1-a-92c"
+  },
+  "/algorithms/matching-engine-566": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---algorithms-matching-engine-9-fe-b2f"
+  },
+  "/algorithms/zero-knowledge-d24": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---algorithms-zero-knowledge-932-ce7"
+  },
+  "/api/api-overview-d5b": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---api-api-overview-65-d-36d"
+  },
+  "/architecture/business-flow-a03": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---architecture-business-flow-887-d7a"
+  },
+  "/architecture/system-overview-aec": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---architecture-system-overview-859-26e"
+  },
+  "/contracts/contracts-overview-8fe": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---contracts-contracts-overview-08-f-523"
+  },
+  "/defi/defi-overview-600": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---defi-defi-overview-7-ad-568"
+  },
+  "/getting-started/quickstart-c60": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---getting-started-quickstartfbd-45d"
+  },
+  "/iot/iot-overview-d84": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---iot-iot-overview-813-803"
+  },
+  "/-7da": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---0-e-3-279"
+  }
+}

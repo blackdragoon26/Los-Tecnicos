@@ -1,0 +1,24 @@
+{
+  "id": "api/api-overview",
+  "title": "API Reference",
+  "description": "The Stelltron backend exposes a REST API built on Go/Gin. All protected endpoints require a Bearer JWT token in the Authorization header.",
+  "source": "@site/docs/api/overview.md",
+  "sourceDirName": "api",
+  "slug": "/api/api-overview",
+  "permalink": "/api/api-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/api/overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "api-overview",
+    "title": "API Reference",
+    "sidebar_label": "Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DeFi Protocol",
+    "permalink": "/defi/defi-overview"
+  }
+}

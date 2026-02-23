@@ -1,0 +1,28 @@
+{
+  "id": "contracts/contracts-overview",
+  "title": "Smart Contracts",
+  "description": "Stelltron deploys four Soroban contracts on the Stellar testnet, written in Rust and compiled to WASM. All contracts are under 200 lines each, intentionally lean — on-chain storage is expensive, so the Soroban contracts handle token accounting and governance, while the Go backend handles order books and matching logic.",
+  "source": "@site/docs/contracts/overview.md",
+  "sourceDirName": "contracts",
+  "slug": "/contracts/contracts-overview",
+  "permalink": "/contracts/contracts-overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/blackdragoon26/Los-Tecnicos/tree/main/docs/docs/contracts/overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "contracts-overview",
+    "title": "Smart Contracts",
+    "sidebar_label": "Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/iot/iot-overview"
+  },
+  "next": {
+    "title": "DeFi Protocol",
+    "permalink": "/defi/defi-overview"
+  }
+}
