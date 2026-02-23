@@ -83,102 +83,54 @@ export default function Marketplace() {
 
       toast.info(`Preparing ${type} order transaction...`);
 
-      // 2. Build the Soroban InvokeHostFunction XDR for the "create_order" endpoint on the contract
-      // Function signature: create_order(env: Env, user: Address, order_type: OrderType, kwh_amount: i128, price_per_kwh: i128, device_id: String)
-      const orderTypeVal = type === "sell" ? "Sell" : "Buy";
+      // 2. Build the contract call using the high-level Contract class
+      // This handles all XDR encoding automatically (same as the Stellar CLI)
+      const { Contract, SorobanRpc } = await import("@stellar/stellar-sdk");
+      const contract = new Contract(contractId);
 
-      // Helper: build a proper i128 ScVal from a JS number
-      // nativeToScVal with "i128" can fail with regular numbers - must use explicit XDR construction
-      const toI128 = (value: number): xdr.ScVal => {
-        const bigVal = BigInt(Math.round(value));
-        const hi = bigVal >> 64n;
-        const lo = bigVal & 0xFFFFFFFFFFFFFFFFn;
-        return xdr.ScVal.scvI128(
-          new xdr.Int128Parts({
-            hi: new xdr.Int64(hi),
-            lo: new xdr.Uint64(lo),
-          })
-        );
-      };
+      const kwhRaw = BigInt(Math.round(parseFloat(amount) * 1000));
+      const priceRaw = BigInt(Math.round(parseFloat(price) * 1000000));
 
-      const kwhAmount = parseFloat(amount) * 1000;
-      const pricePerKwh = parseFloat(price) * 1000000;
+      // Build call operation — Contract.call handles encoding all args correctly
+      const callOp = contract.call(
+        "create_order",
+        nativeToScVal(publicKey, { type: "address" }),
+        xdr.ScVal.scvSymbol(type === "sell" ? "Sell" : "Buy"),
+        nativeToScVal(kwhRaw, { type: "i128" }),
+        nativeToScVal(priceRaw, { type: "i128" }),
+        nativeToScVal("web_client", { type: "string" })
+      );
 
-      const invokeHostFunctionOp = Operation.invokeHostFunction({
-        func: xdr.HostFunction.hostFunctionTypeInvokeContract(
-          new xdr.InvokeContractArgs({
-            contractAddress: Address.fromString(contractId).toScAddress(),
-            functionName: "create_order",
-            args: [
-              nativeToScVal(publicKey, { type: "address" }),
-              nativeToScVal(orderTypeVal, { type: "symbol" }),
-              toI128(kwhAmount),
-              toI128(pricePerKwh),
-              nativeToScVal("web_client", { type: "string" }),
-            ],
-          })
-        ),
-        auth: [],
-      });
-
-      // 3. Assemble the Transaction Envelope
-      // Fetch the real sequence number from Horizon Testnet so the signature is valid
+      // 3. Fetch account sequence from Horizon
       toast.info("Fetching account sequence...");
-      let sequence = "1";
+      let sequence = "0";
       try {
         const horizonRes = await fetch(`https://horizon-testnet.stellar.org/accounts/${publicKey}`);
         if (horizonRes.ok) {
           const accountData = await horizonRes.json();
           sequence = accountData.sequence;
-          console.log(`>>> Web3: Using sequence ${sequence} for account ${publicKey}`);
         }
       } catch (err) {
-        console.warn("Horizon fetch failed, falling back to dummy sequence:", err);
+        console.warn("Horizon fetch failed:", err);
       }
 
       const account = new Account(publicKey, sequence);
       let tx = new TransactionBuilder(account, {
-        fee: "100000",
+        fee: "1000000",
         networkPassphrase: Networks.TESTNET,
       })
-        .addOperation(invokeHostFunctionOp)
+        .addOperation(callOp)
         .setTimeout(300)
         .build();
 
-      // 4. Simulate Transaction to get Footprints and Resource Fees
-      toast.info("Simulating resources on Soroban...");
+      // 4. Simulate & Prepare via SorobanRpc.Server (handles footprints, auth, fees)
+      toast.info("Simulating on Soroban Testnet...");
       const rpcUrl = import.meta.env.VITE_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
       try {
-        const simRes = await fetch(rpcUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            method: "simulateTransaction",
-            params: { transaction: tx.toXDR() },
-          }),
-        });
-        const simData = await simRes.json();
-        if (simData.error) throw new Error(`Simulation Error: ${simData.error.message}`);
-
-        if (simData.result.error) {
-          throw new Error(`Simulation Failed: ${simData.result.error}`);
-        }
-
-        // Add simulation data to transaction
-        const sorobanData = xdr.SorobanTransactionData.fromXDR(simData.result.transactionData, "base64");
-
-        // Rebuild transaction with simulated data
-        tx = new TransactionBuilder(account, {
-          fee: (BigInt(simData.result.minResourceFee) + BigInt(20000)).toString(),
-          networkPassphrase: Networks.TESTNET,
-        })
-          .addOperation(invokeHostFunctionOp)
-          .setSorobanData(sorobanData)
-          .setTimeout(300)
-          .build();
-
+        const server = new SorobanRpc.Server(rpcUrl);
+        const preparedTx = await server.prepareTransaction(tx);
+        // prepareTransaction returns an assembled, ready-to-sign Transaction
+        tx = preparedTx as any;
       } catch (simErr: any) {
         console.error("Simulation failed:", simErr);
         throw new Error(`Soroban simulation failed: ${simErr.message}. Ensure your contract ID is correct.`);
