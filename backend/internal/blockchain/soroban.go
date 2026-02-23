@@ -55,18 +55,20 @@ func NewSorobanClient(rpcURL string) *SorobanClient {
 	if oracleSeed != "" {
 		kp, err = keypair.ParseFull(oracleSeed)
 		if err != nil {
-			log.Printf("Warning: Invalid ORACLE_PRIVATE_KEY, using random: %v", err)
+			log.Printf("⚠️ WARNING: Invalid ORACLE_PRIVATE_KEY format, using random: %v", err)
 			kp, _ = keypair.Random()
 		} else {
-			log.Println("Loaded persistent Oracle Key.")
+			log.Println("✅ Loaded persistent Oracle Key.")
 		}
 	} else {
-		log.Println("No ORACLE_PRIVATE_KEY found, generating random one.")
+		log.Println("⚠️ CRITICAL: No ORACLE_PRIVATE_KEY found in environment! Using a random unfunded key.")
 		kp, err = keypair.Random()
 		if err != nil {
 			log.Fatal("Failed to generate key")
 		}
 	}
+
+	log.Printf(">>> SOROBAN: Ready. Oracle Admin Address (Sponsor): %s", kp.Address())
 
 	return &SorobanClient{
 		RPCURL:     rpcURL,
@@ -292,7 +294,7 @@ func (c *SorobanClient) SponsorAndSubmitTransaction(signedXDR string) (string, e
 		txnbuild.FeeBumpTransactionParams{
 			Inner:      tx,
 			FeeAccount: c.OracleKP.Address(),
-			BaseFee:    txnbuild.MinBaseFee, // Use minimum, or calculate dynamically
+			BaseFee:    100000, // 0.1 XLM to cover Soroban gas
 		},
 	)
 	if err != nil {
@@ -332,7 +334,8 @@ func (c *SorobanClient) SponsorAndSubmitTransaction(signedXDR string) (string, e
 	}
 
 	if sendResp.Status == "ERROR" {
-		return "", fmt.Errorf("soroban transaction failed: %s", sendResp.Error)
+		log.Printf(">>> SOROBAN ERROR: %s", sendResp.Error)
+		return "", fmt.Errorf("Soroban network rejected transaction. This usually means the marketplace contract ID is wrong, the transaction fee is too low, or the admin account is unfunded. (Error: %s)", sendResp.Error)
 	}
 
 	log.Printf(">>> BLOCKCHAIN: Sponsored Transaction Submitted! Hash: %s", sendResp.Hash)
