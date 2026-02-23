@@ -11,7 +11,7 @@ export default {
   "baseUrl": "/",
   "organizationName": "blackdragoon26",
   "projectName": "Los-Tecnicos",
-  "onBrokenLinks": "warn",
+  "onBrokenLinks": "throw",
   "onBrokenMarkdownLinks": "warn",
   "i18n": {
     "defaultLocale": "en",
@@ -90,7 +90,7 @@ export default {
             },
             {
               "label": "API Reference",
-              "to": "/api/overview"
+              "to": "/api/api-overview"
             }
           ]
         },
