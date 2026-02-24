@@ -7,6 +7,132 @@
 Link to frontend -https://los-tecnicos.vercel.app/
 
 Docs https://stelltron-docs.vercel.app/
+# ⚡ Los Tecnicos - Stelltron
+> Built for the Stellar Build-A-Thon | Making solar energy profitable for everyone
+
+[![Frontend](https://img.shields.io/badge/Live-Frontend-success?style=for-the-badge)](https://los-tecnicos.vercel.app/)
+[![Docs](https://img.shields.io/badge/Read-Documentation-informational?style=for-the-badge)](https://stelltron-docs.vercel.app/)
+[![Backend](https://img.shields.io/badge/Live-Backend-blue?style=for-the-badge)](https://los-tecnicos-backend.onrender.com/)
+
+<img width="1920" height="860" alt="Stelltron Dashboard Preview" src="https://github.com/user-attachments/assets/53998de0-f9d4-4d00-94e2-4f0343f7e06f" />
+
+---
+
+## 🛑 The Problem
+
+My neighbor spent $22,000 installing solar panels last year. When he generates excess energy, the utility company buys it from him for **2 cents per kWh**. Meanwhile, I'm buying energy from that exact same grid for **28 cents per kWh**. 
+
+The utility company acts as a middleman, pocketing the massive difference. My neighbor's ROI on a $22K investment? 18 years. By the time it pays for itself, the panels will need to be replaced. 
+
+This isn't an isolated incident. Millions of households are sitting on valuable energy assets that are artificially choked by a broken system:
+1. **The middleman takes the profits** - Utilities buy low and sell high.
+2. **No local market exists** - You cannot legally or technically sell your excess power directly to your neighbor.
+3. **Zero transparency** - Consumers have no idea where their energy comes from or how its price is calculated.
+
+We are fixing this using blockchain and IoT.
+
+---
+
+## 💡 Our Solution: Stelltron
+
+Stelltron is a peer-to-peer (P2P) energy marketplace built on the Stellar network. Think of it as a local energy exchange:
+- Solar owners list their excess energy for sale.
+- Neighbors buy it at fair, dynamically calculated market prices.
+- Everything settles instantly on-chain.
+- The utility middleman is completely removed.
+
+### How It Works in the Real World
+
+We didn't just build smart contracts; we built a bridge to the physical world:
+
+🔌 **Physical Integration (IoT):** ESP32 microcontrollers monitor real solar panels (voltage, current, production). When excess energy is generated, the system mints tokens representing real kilowatt-hours (1 Token = 1 kWh). 
+
+🕸️ **Decentralized Infrastructure (DePIN):** Raspberry Pi nodes form a mesh network that routes energy data. Operators earn rewards for participating, creating a self-sustaining network.
+
+🧮 **Dynamic Pricing Engine:** Built in Go for maximum speed, our engine calculates fair market prices in real-time based on 6 factors: Supply/Demand, Battery State of Charge, Distance, Time of Day, Seller Reliability, and Seasonality. 
+
+---
+
+## ⛓️ Why We Chose Stellar
+
+We evaluated Ethereum, Solana, and Polygon. Stellar was the clear winner for energy markets:
+
+*   **Speed:** Energy trades need to settle instantly. Stellar confirms transactions in 3-5 seconds.
+*   **Cost:** We are processing micro-transactions. Selling 1 kWh for $0.10 only makes sense if the transaction fee doesn't eat the profit. Stellar transactions cost fractions of a cent.
+*   **Compliance:** Energy is a heavily regulated sector. Stellar’s built-in asset controls make future regulatory compliance much easier to navigate.
+*   **Soroban:** Writing smart contracts in Rust provides incredible safety guarantees, tiny WASM binaries, and blazing-fast execution.
+
+---
+
+## 🏗️ Technical Architecture
+
+Stelltron is a full-stack, hardware-to-blockchain ecosystem. 
+
+### 1. Smart Contracts (Rust / Soroban)
+Deployed to the Stellar network, our four core contracts handle the heavy lifting:
+*   **Energy Token:** Handles minting (only by authorized IoT devices) and burning. Prevents inflation.
+*   **Marketplace:** The order book. Matches bids/asks, handles escrow, and processes instant settlement.
+*   **Network Incentives:** Rewards Raspberry Pi node operators (1 stroop per 100 packets routed).
+*   **Governance:** Empowers the community to vote on pricing algorithms and grid rules.
+
+### 2. Backend Engine (Go)
+Written in Go for concurrency and speed. 
+*   **Matching Engine:** Runs continuously in a Goroutine, finding compatible buy/sell orders and executing them on Soroban instantly.
+*   **Data Pipeline:** Consumes raw MQTT data from the ESP32 hardware, updates the PostgreSQL database, and triggers token minting.
+
+### 3. Frontend (Next.js & React)
+A high-performance, server-side rendered dashboard.
+*   Wallet integration via **Freighter**.
+*   Real-time order book and trading interface.
+*   Live 3D WebGL visualizations of energy flowing through the local grid network.
+
+---
+
+## 🔄 A Real-World Scenario
+
+**9:00 AM:** Sarah's solar panels are producing 8 kWh/hour while she is at work. Her ESP32 detects the excess and notifies the backend.
+**9:01 AM:** 8 Energy Tokens are minted to Sarah's wallet. She lists them on Stelltron for 10 XLM/kWh.
+**1:00 PM:** Mike gets home and turns on his AC. The grid costs 14 XLM/kWh, but he sees Sarah's energy for 10 XLM. He places a buy order.
+**1:00:05 PM:** Our Go engine matches the orders and executes the Soroban contract. Sarah instantly receives her XLM, and Mike receives his energy allocation.
+**1:00:10 PM:** Mike's house consumes the energy, the tokens are burned, and the trade is permanently recorded on Stellar.
+
+*   **Mike saved 28%** compared to utility rates.
+*   **Sarah made 1000% more** than the utility company would have paid her.
+
+---
+
+## 🚀 What Makes This Different?
+
+1.   **We built the whole stack:** This isn't just a UI mockup. We built the IoT ingestion, the backend matching engine, and the Soroban contracts. It is a complete, working system.
+2.   **Real hardware interactions:** The ESP32 and MQTT code exists and functions. We bridge the physical and digital worlds. 
+3.   **The economics make sense:** By cutting out the utility monopoly, the payback period for solar installations drops from 18 years to ~8 years.
+
+---
+
+## 💻 Run It Yourself
+
+### Prerequisites
+*   Rust + Soroban CLI
+*   Go 1.21+
+*   Node.js 18+
+*   PostgreSQL + Redis
+*   Mosquitto MQTT Broker
+
+### Quick Start
+```bash
+# 1. Deploy the Soroban contracts
+cd stellar_smart_contract
+./deploy.sh
+
+# 2. Start the Go matching engine & API
+cd ../backend
+docker-compose up -d
+go run cmd/api/main.go
+
+# 3. Start the Next.js frontend
+cd ../frontend
+npm install
+npm run dev
 
 Link to Backend  -https://los-tecnicos-backend.onrender.com/
 
