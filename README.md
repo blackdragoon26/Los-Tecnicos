@@ -11,7 +11,7 @@
 
 This project has been advanced to **Level 4 (Green Belt)**, focusing on advanced contract patterns, production readiness, and real-world hardware integration.
 
-### 👉 Overview
+### Overview
 Stelltron is a peer-to-peer energy marketplace that optimizes distributed energy resources (DERs) using the Stellar blockchain. We have implemented advanced Soroban contract patterns and prepared the system for production-grade deployment.
 
 **Key Level 4 Implementations:**
@@ -23,18 +23,7 @@ Stelltron is a peer-to-peer energy marketplace that optimizes distributed energy
 
 ---
 
-## ⚪ Level 1 - White Belt Compliance (Foundation)
-
-Stelltron fully implements all White Belt requirements as the foundation of its architecture:
-
-- [x] **Wallet Setup**: Integrated with **Freighter Wallet** on the **Stellar Testnet**.
-- [x] **Wallet Connection**: Robust connect/disconnect functionality with persistent state.
-- [x] **Balance Handling**: Real-time fetching and clear display of XLM balances.
-- [x] **Transaction Flow**: Seamless XLM transactions for energy settlements with user feedback and confirmation hashes.
-
----
-
-## 🚀 Live Demo & Documentation
+## Live Demo & Documentation
 
 - **Frontend App**: [https://los-tecnicos.vercel.app/](https://los-tecnicos.vercel.app/)
 - **Project Docs**: [https://stelltron-docs.vercel.app/](https://stelltron-docs.vercel.app/)
@@ -42,7 +31,7 @@ Stelltron fully implements all White Belt requirements as the foundation of its 
 
 ---
 
-## 🛠️ Technical Architecture
+## Technical Architecture
 
 ### 1. Smart Contracts (Soroban/Rust)
 We utilized a 4-contract modular architecture for maximum scalability and security:
@@ -63,7 +52,7 @@ We utilized a 4-contract modular architecture for maximum scalability and securi
 
 ---
 
-## 🔗 Contract & Transaction Details
+## Contract & Transaction Details
 
 ---
 
@@ -74,7 +63,7 @@ We utilized a 4-contract modular architecture for maximum scalability and securi
 
 ---
 
-## ⚙️ Setup & Installation
+## Setup & Installation
 
 ### Prerequisites
 - **Node.js** 18+ & **npm**
