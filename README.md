@@ -1,496 +1,118 @@
-# Los Tecnicos - Stelltron
+# Los Tecnicos — Stelltron 
 
-> Built for Stellar Build-A-Thon | Making solar panels profitable for everyone
+> Making solar panels profitable for everyone | Built for Stellar Build-A-Thon
 
+[![Deploy Docs](https://github.com/blackdragoon26/Los-Tecnicos/actions/workflows/docs.yml/badge.svg)](https://github.com/blackdragoon26/Los-Tecnicos/actions/workflows/docs.yml)
 
----
-Link to frontend -https://los-tecnicos.vercel.app/
-
-Docs https://stelltron-docs.vercel.app/
-# ⚡ Los Tecnicos - Stelltron
-> Built for the Stellar Build-A-Thon | Making solar energy profitable for everyone
-
-[![Frontend](https://img.shields.io/badge/Live-Frontend-success?style=for-the-badge)](https://los-tecnicos.vercel.app/)
-[![Docs](https://img.shields.io/badge/Read-Documentation-informational?style=for-the-badge)](https://stelltron-docs.vercel.app/)
-[![Backend](https://img.shields.io/badge/Live-Backend-blue?style=for-the-badge)](https://los-tecnicos-backend.onrender.com/)
-
-<img width="1920" height="860" alt="Stelltron Dashboard Preview" src="https://github.com/user-attachments/assets/53998de0-f9d4-4d00-94e2-4f0343f7e06f" />
 
 ---
 
-## 🛑 The Problem
+## 🟢 Level 4 - Green Belt Submission
 
-My neighbor spent $22,000 installing solar panels last year. When he generates excess energy, the utility company buys it from him for **2 cents per kWh**. Meanwhile, I'm buying energy from that exact same grid for **28 cents per kWh**. 
+This project has been advanced to **Level 4 (Green Belt)**, focusing on advanced contract patterns, production readiness, and real-world hardware integration.
 
-The utility company acts as a middleman, pocketing the massive difference. My neighbor's ROI on a $22K investment? 18 years. By the time it pays for itself, the panels will need to be replaced. 
+### 👉 Overview
+Stelltron is a peer-to-peer energy marketplace that optimizes distributed energy resources (DERs) using the Stellar blockchain. We have implemented advanced Soroban contract patterns and prepared the system for production-grade deployment.
 
-This isn't an isolated incident. Millions of households are sitting on valuable energy assets that are artificially choked by a broken system:
-1. **The middleman takes the profits** - Utilities buy low and sell high.
-2. **No local market exists** - You cannot legally or technically sell your excess power directly to your neighbor.
-3. **Zero transparency** - Consumers have no idea where their energy comes from or how its price is calculated.
-
-We are fixing this using blockchain and IoT.
-
----
-
-## 💡 Our Solution: Stelltron
-
-Stelltron is a peer-to-peer (P2P) energy marketplace built on the Stellar network. Think of it as a local energy exchange:
-- Solar owners list their excess energy for sale.
-- Neighbors buy it at fair, dynamically calculated market prices.
-- Everything settles instantly on-chain.
-- The utility middleman is completely removed.
-
-### How It Works in the Real World
-
-We didn't just build smart contracts; we built a bridge to the physical world:
-
-🔌 **Physical Integration (IoT):** ESP32 microcontrollers monitor real solar panels (voltage, current, production). When excess energy is generated, the system mints tokens representing real kilowatt-hours (1 Token = 1 kWh). 
-
-🕸️ **Decentralized Infrastructure (DePIN):** Raspberry Pi nodes form a mesh network that routes energy data. Operators earn rewards for participating, creating a self-sustaining network.
-
-🧮 **Dynamic Pricing Engine:** Built in Go for maximum speed, our engine calculates fair market prices in real-time based on 6 factors: Supply/Demand, Battery State of Charge, Distance, Time of Day, Seller Reliability, and Seasonality. 
+**Key Level 4 Implementations:**
+- **Advanced Contract Architecture**: A multi-contract ecosystem (Energy Token, Marketplace, Governance, Incentives).
+- **Custom Token & Liquidity Mechanics**: Specialized `LT` tokens with automated mint/burn and staking yield.
+- **Production-Ready CI/CD**: Automated deployment pipeline for documentation and tests.
+- **Mobile Responsive Design**: Fully responsive UI/UX for grid management on the go.
+- **Advanced Event Streaming**: Real-time IoT data integration via MQTT and WebSockets.
 
 ---
 
-## ⛓️ Why We Chose Stellar
+## ⚪ Level 1 - White Belt Compliance (Foundation)
 
-We evaluated Ethereum, Solana, and Polygon. Stellar was the clear winner for energy markets:
+Stelltron fully implements all White Belt requirements as the foundation of its architecture:
 
-*   **Speed:** Energy trades need to settle instantly. Stellar confirms transactions in 3-5 seconds.
-*   **Cost:** We are processing micro-transactions. Selling 1 kWh for $0.10 only makes sense if the transaction fee doesn't eat the profit. Stellar transactions cost fractions of a cent.
-*   **Compliance:** Energy is a heavily regulated sector. Stellar’s built-in asset controls make future regulatory compliance much easier to navigate.
-*   **Soroban:** Writing smart contracts in Rust provides incredible safety guarantees, tiny WASM binaries, and blazing-fast execution.
-
----
-
-## 🏗️ Technical Architecture
-
-Stelltron is a full-stack, hardware-to-blockchain ecosystem. 
-
-### 1. Smart Contracts (Rust / Soroban)
-Deployed to the Stellar network, our four core contracts handle the heavy lifting:
-*   **Energy Token:** Handles minting (only by authorized IoT devices) and burning. Prevents inflation.
-*   **Marketplace:** The order book. Matches bids/asks, handles escrow, and processes instant settlement.
-*   **Network Incentives:** Rewards Raspberry Pi node operators (1 stroop per 100 packets routed).
-*   **Governance:** Empowers the community to vote on pricing algorithms and grid rules.
-
-### 2. Backend Engine (Go)
-Written in Go for concurrency and speed. 
-*   **Matching Engine:** Runs continuously in a Goroutine, finding compatible buy/sell orders and executing them on Soroban instantly.
-*   **Data Pipeline:** Consumes raw MQTT data from the ESP32 hardware, updates the PostgreSQL database, and triggers token minting.
-
-### 3. Frontend (Next.js & React)
-A high-performance, server-side rendered dashboard.
-*   Wallet integration via **Freighter**.
-*   Real-time order book and trading interface.
-*   Live 3D WebGL visualizations of energy flowing through the local grid network.
+- [x] **Wallet Setup**: Integrated with **Freighter Wallet** on the **Stellar Testnet**.
+- [x] **Wallet Connection**: Robust connect/disconnect functionality with persistent state.
+- [x] **Balance Handling**: Real-time fetching and clear display of XLM balances.
+- [x] **Transaction Flow**: Seamless XLM transactions for energy settlements with user feedback and confirmation hashes.
 
 ---
 
-## 🔄 A Real-World Scenario
+## 🚀 Live Demo & Documentation
 
-**9:00 AM:** Sarah's solar panels are producing 8 kWh/hour while she is at work. Her ESP32 detects the excess and notifies the backend.
-**9:01 AM:** 8 Energy Tokens are minted to Sarah's wallet. She lists them on Stelltron for 10 XLM/kWh.
-**1:00 PM:** Mike gets home and turns on his AC. The grid costs 14 XLM/kWh, but he sees Sarah's energy for 10 XLM. He places a buy order.
-**1:00:05 PM:** Our Go engine matches the orders and executes the Soroban contract. Sarah instantly receives her XLM, and Mike receives his energy allocation.
-**1:00:10 PM:** Mike's house consumes the energy, the tokens are burned, and the trade is permanently recorded on Stellar.
-
-*   **Mike saved 28%** compared to utility rates.
-*   **Sarah made 1000% more** than the utility company would have paid her.
+- **Frontend App**: [https://los-tecnicos.vercel.app/](https://los-tecnicos.vercel.app/)
+- **Project Docs**: [https://stelltron-docs.vercel.app/](https://stelltron-docs.vercel.app/)
+- **Backend API**: [https://los-tecnicos-backend.onrender.com/](https://los-tecnicos-backend.onrender.com/)
 
 ---
 
-## 🚀 What Makes This Different?
+## 🛠️ Technical Architecture
 
-1.   **We built the whole stack:** This isn't just a UI mockup. We built the IoT ingestion, the backend matching engine, and the Soroban contracts. It is a complete, working system.
-2.   **Real hardware interactions:** The ESP32 and MQTT code exists and functions. We bridge the physical and digital worlds. 
-3.   **The economics make sense:** By cutting out the utility monopoly, the payback period for solar installations drops from 18 years to ~8 years.
+### 1. Smart Contracts (Soroban/Rust)
+We utilized a 4-contract modular architecture for maximum scalability and security:
+- **Energy Token**: Handles minting (production) and burning (consumption).
+- **Marketplace**: P2P order matching and settlement logic.
+- **Governance**: On-chain voting for grid parameters.
+- **Network Incentives**: Rewards DePIN node operators (Raspberry Pi/ESP32).
+
+### 2. Backend (Go)
+- **Matching Engine**: High-performance order pairing.
+- **Dynamic Pricing**: Algorithmic price discovery based on grid SoC and demand.
+- **IoT Gateway**: MQTT bridge for real hardware telemetry.
+
+### 3. Frontend (React/Vite)
+- **Dashboard**: Real-time visualization of energy flow and earnings.
+- **Marketplace**: Professional trading interface for energy tokens.
+- **Mobile First**: Shadcn/UI components optimized for all devices.
 
 ---
 
-## 💻 Run It Yourself
+## 🔗 Contract & Transaction Details
+
+---
+
+- **Marketplace Contract**: `CCLRPNRPQDTG5773FCQJ2PH3WP74CNSO5SWFYFOXXLG2Z7YX6DPSLSA2`
+- **Energy Token Address**: `CC3UGVJXGH3X2OE2WRRL4Z7VIUVSB64MYAZSNCXQGXXE64RRR4P3VZD`
+- **Deployment Transaction Hash**: `df3c80b7704a8da30d6ee0af68c1e7e0fe60a78a6b8e8d4d1087ce30b32204c9`
+- **Verified Account**: `GAIFJD5FD236SFHM75GJ2OGNY6CJI5YAGSAQ7LHWXNQL6H5LBABEAPSG`
+
+---
+
+## ⚙️ Setup & Installation
 
 ### Prerequisites
-*   Rust + Soroban CLI
-*   Go 1.21+
-*   Node.js 18+
-*   PostgreSQL + Redis
-*   Mosquitto MQTT Broker
+- **Node.js** 18+ & **npm**
+- **Go** 1.21+
+- **Rust** & **Soroban CLI**
+- **Freighter Wallet** (Stellar Testnet)
 
-### Quick Start
+### Local Development
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/blackdragoon26/Los-Tecnicos.git
+   cd Los-Tecnicos
+   ```
+
+2. **Frontend Setup**
 ```bash
-# 1. Deploy the Soroban contracts
-cd stellar_smart_contract
-./deploy.sh
-
-# 2. Start the Go matching engine & API
-cd ../backend
-docker-compose up -d
-go run cmd/api/main.go
-
-# 3. Start the Next.js frontend
-cd ../frontend
+cd frontend
 npm install
 npm run dev
-
-Link to Backend  -https://los-tecnicos-backend.onrender.com/
-
-
-
-<img width="1920" height="860" alt="image" src="https://github.com/user-attachments/assets/53998de0-f9d4-4d00-94e2-4f0343f7e06f" />
-
-
-## The Problem We're Solving
-
-My neighbor installed solar panels last year. Cost him $22,000. Know what the utility company pays him for excess energy? 2 cents per kWh. Meanwhile, I'm paying 28 cents per kWh from the same grid. 
-
-That's broken.
-
-He generates clean energy during the day when he's at work. It goes back to the grid for pennies. Then at night, he buys it back at 14x the price. His ROI? 18 years. By then, he'll need new panels.
-
-This isn't just my neighbor. It's 3.2 million US households with solar, and millions more worldwide. They're sitting on valuable assets that can't reach their full potential because:
-
-1. **The middleman takes everything** - Utilities buy low, sell high, keep the difference
-2. **No market exists** - You can't sell directly to your neighbor even if you wanted to
-3. **Zero transparency** - Nobody knows where energy comes from or what it actually costs
-4. **Tech is stuck in the 1950s** - The grid wasn't built for distributed generation
-
-We're fixing this with blockchain.
-
----
-
-## What We Built
-
-Stelltron is a peer-to-peer energy marketplace running on Stellar. Think of it as a local energy exchange where:
-
-- Solar owners list their excess energy for sale
-- Neighbors buy it at fair market prices
-- Everything settles instantly on-chain
-- No utility company needed
-
-But here's what makes it actually work in the real world:
-
-### Real Hardware Integration
-
-We're not just building smart contracts in a vacuum. We built this to work with actual solar installations:
-
-**ESP32 microcontrollers** monitor your solar panels - voltage, current, production. When you generate excess energy, the system mints tokens representing real kWh. One token = one kilowatt-hour. Physics meets blockchain.
-
-**Raspberry Pi nodes** form a mesh network that routes energy data and earns rewards for participation. Every packet they route makes them money. Decentralized infrastructure that pays for itself.
-
-### Smart Contract Architecture
-
-We deployed four Soroban contracts on Stellar testnet:
-
-**Energy Token Contract** - Handles token minting when solar panels produce. Only authorized devices can mint (verified through our IoT backend). Prevents inflation, ensures every token represents real energy.
-
-**Marketplace Contract** - Order book for energy trading. Create buy/sell orders, automatic matching based on price-time priority, escrow handling. Built-in yield mechanism (5% APY simulation) because why shouldn't your energy tokens earn interest?
-
-**Network Incentives Contract** - Pays Raspberry Pi operators for routing data. 1 stroop per 100 packets. Makes the network self-sustaining.
-
-**Governance Contract** - Community votes on pricing parameters, grid rules, feature additions. One wallet, one vote. Democracy for your local energy grid.
-
-### Dynamic Pricing Engine
-
-Wrote this in Go because we needed speed. Calculates fair prices using six factors:
-
-- Supply vs demand (basic economics)
-- Battery state of charge (scarcity pricing)
-- Physical distance (transmission costs)
-- Time of day (peak vs off-peak)
-- Seller reliability score (reputation matters)
-- Seasonal adjustments (summer vs winter production)
-
-The formula looks complicated but it basically answers: "What should this energy cost right now given all market conditions?"
-
-Community can vote to change the coefficients through governance. Want to reward local trading more? Vote to increase the distance penalty. Want to incentivize battery storage? Adjust the SoC factor. It's your grid.
-
----
-
-## Why Stellar?
-
-We evaluated Ethereum, Solana, and Polygon. Stellar won for reasons that matter in energy markets:
-
-**Speed** - Energy trades need to settle fast. 3-5 seconds on Stellar vs 15 seconds on Ethereum. When someone needs power, they need it now.
-
-**Cost** - We're talking micro-transactions. Selling 1 kWh for $0.10 needs to be profitable after fees. Stellar transactions cost $0.00001. Ethereum would eat the entire profit.
-
-**Compliance-ready** - Energy is regulated. Heavily. Stellar was built with financial regulations in mind. Makes future licensing easier.
-
-**Soroban** - Writing smart contracts in Rust instead of Solidity was refreshing. Better safety guarantees, smaller WASM binaries, faster execution.
-
-**Built-in DEX** - Future integration path is clear. CommunityEnergy tokens could trade on Stellar's native exchange without writing new contracts.
-
-The tech just made sense for what we're building.
-
----
-
-## Technical Architecture
-
-### Backend (Go)
-
-Chose Go for the API server because:
-- Goroutines make concurrent order matching trivial
-- PostgreSQL driver is rock solid
-- MQTT client libraries actually work
-- Compile to a single binary for easy deployment
-
-The matching engine runs in a goroutine, checking for compatible orders every 5 seconds. When it finds a match (buy price ≥ sell price, quantities align), it calls the Soroban contract to execute the trade.
-
-Database schema is straightforward:
-- `users` - wallet addresses and metadata
-- `orders` - buy/sell orders with status tracking
-- `devices` - ESP32 and Pi registration
-- `transactions` - on-chain trade history
-- `device_telemetry` - real-time IoT data
-
-Redis handles rate limiting (100 req/min per IP) and caches hot data.
-
-### Frontend (Next.js)
-
-Server-side rendering for performance. Key pages:
-
-- `/marketplace` - Browse available energy, create orders
-- `/dashboard` - Your position, pending trades, balance
-- `/governance` - Active proposals, voting interface
-- `/analytics` - Price charts, volume stats, grid visualization
-
-Used Three.js for the 3D grid view. Shows energy flowing between nodes in real-time. Looks cool and actually helps visualize the network topology.
-
-Wallet integration with Freighter. No passwords, no email - just sign in with your Stellar wallet. Transactions require signatures, so nobody can trade without your explicit approval.
-
-### Smart Contracts (Rust/Soroban)
-
-Each contract is under 500 lines. Key functions:
-
-**Energy Token:**
-```rust
-pub fn mint(env: Env, admin: Address, to: Address, amount: i128)
-pub fn burn(env: Env, from: Address, amount: i128)
-pub fn balance(env: Env, id: Address) -> i128
 ```
-
-**Marketplace:**
-```rust
-pub fn create_order(env: Env, seller: Address, quantity: i128, price: i128)
-pub fn match_orders(env: Env, order1_id: u64, order2_id: u64)
-pub fn complete_trade(env: Env, trade_id: u64)
+3. **Backend Setup**
 ```
-
-**Network Incentives:**
-```rust
-pub fn register_node(env: Env, node: Address)
-pub fn report_activity(env: Env, node: Address, packets: u64)
-pub fn claim_rewards(env: Env, node: Address) -> i128
+bash
+cd backend
+go mod download
+go run cmd/api/main.go
 ```
-
-**Governance:**
-```rust
-pub fn create_proposal(env: Env, proposer: Address, description: String)
-pub fn vote(env: Env, voter: Address, proposal_id: u64, support: bool)
-pub fn finalize(env: Env, proposal_id: u64)
-```
-
-Deployment script handles everything - compiles to WASM, deploys to testnet, updates backend .env with contract IDs.
-
-### IoT Layer (ESP32 + Raspberry Pi)
-
-ESP32s talk MQTT. Every 10 seconds they publish:
-```json
-{
-  "device_id": "esp32_001",
-  "voltage": 48.2,
-  "current": 12.5,
-  "power_kwh": 0.6,
-  "battery_soc": 85,
-  "timestamp": 1738419200
-}
-```
-
-Backend consumes these messages, updates the database, and mints tokens when production exceeds consumption.
-
-Raspberry Pis run a simple Python script that routes data and reports activity to the incentives contract. They're earning money just by being online.
-
-For demo purposes, we built a simulation engine that generates realistic data. Fluctuates battery levels, simulates production curves, adds noise. Makes testing possible without physical hardware.
-
----
-
-## How It Actually Works
-
-Let me walk through a real trade:
-
-**9:00 AM** - Sarah's solar panels are cranking. She's at work, house is empty, generating 8 kWh/hour. Her ESP32 sees this and tells our backend.
-
-**9:01 AM** - Backend mints 8 tokens to Sarah's wallet. She opens the app and lists them for sale at 10 XLM/kWh.
-
-**1:00 PM** - Mike gets home, turns on the AC. Needs energy. Sees Sarah's offer. Market rate is 12 XLM/kWh but Sarah's selling for 10. He creates a buy order for 5 kWh at 11 XLM/kWh (still cheaper than grid).
-
-**1:00:05 PM** - Matching engine finds compatible orders. Calls marketplace contract. Trade executes. Sarah gets 50 XLM (5 × 10), Mike gets 5 tokens. Transaction settles in 4 seconds.
-
-**1:00:10 PM** - Mike's device confirms energy receipt. Tokens are burned (they've been "consumed"). Sarah's wallet shows the XLM. Both get notifications.
-
-Total cost to Mike: 55 XLM (~$5.50). What he would've paid the utility: $7.50. Saved 27%.
-
-Total earnings for Sarah: 55 XLM. What utility would've paid: $0.50. Made 1,000% more.
-
-The difference? No middleman.
-
----
-
-## What Makes This Different
-
-Every hackathon has an "Uber for X" project. What makes ours credible?
-
-**We built the whole stack.** Not just contracts. Not just a UI. Backend matching engine, dynamic pricing, IoT integration, governance - it's all there and it works.
-
-**Real hardware connections.** The ESP32 code exists. The MQTT broker runs. We can plug in actual solar panels and it'll work. Not "in theory" - we tested it.
-
-**Economic model makes sense.** Ran the numbers. At current solar production rates and utility prices, payback period drops from 18 years to 8 years. That's the difference between "maybe someday" and "worth doing now."
-
-**Regulatory awareness.** We know this needs licenses. We know utilities will fight it. We know grids have technical constraints. Built with that reality in mind - the governance system lets communities adapt to local regulations.
-
-**Stellar integration is deep.** Not just "we used XLM." We use Soroban contracts, we're planning DEX integration, we designed around Stellar's compliance features. This couldn't easily be ported to another chain.
-
----
-
-## Challenges We Hit
-
-**Smart contract storage limits** - Soroban has storage constraints. Had to optimize data structures. Orders store minimal data on-chain, full details in Postgres.
-
-**MQTT reliability** - Devices disconnect. Network hiccups. Had to build retry logic and offline queueing. Learned that IoT is harder than it looks.
-
-**Price discovery** - How do you price energy fairly when there's no historical market data? Built the dynamic pricing engine through trial and error. First version was way too volatile.
-
-**Wallet UX** - People don't want to think about wallets and signing. Made onboarding smoother with clear instructions and helpful error messages. Still not perfect.
-
-**Testing contracts** - Soroban testing framework is young. Wrote a lot of integration tests. Deployed to testnet early and often.
-
-**Simulation realism** - Fake IoT data looks fake. Spent time making battery curves realistic, adding noise, simulating cloud cover effects. Details matter.
-
----
-
-## What's Next
-
-If this wins (or even if it doesn't), here's the plan:
-
-**Month 1-2:** Order partial fills, advanced order types (limit/market/stop), mobile app.
-
-**Month 3-6:** Real hardware pilot with 10 households in one neighborhood. Actual solar panels, actual batteries, actual energy trades.
-
-**Month 6-12:** DeFi features - liquidity pools, yield farming, energy savings accounts. Make energy a financial asset.
-
-**Year 2:** Expand to 1,000 households across 3 cities. Start working on regulatory approvals. Partner with solar installers.
-
-**Year 3:** Go international. India has 300 days of sun and expensive energy. Kenya's grid is unreliable. Philippines has high solar adoption. These markets need this.
-
-Long shot goal: By 2030, power 100 million households with P2P solar. Offset 500 million tons of CO2. Make energy accessible and affordable globally.
-
-Ambitious? Yeah. Impossible? We don't think so.
-
----
-
-## Run It Yourself
-
-### Prerequisites
-- Rust + Soroban CLI
-- Go 1.21+
-- Node.js 18+
-- PostgreSQL + Redis
-- Mosquitto MQTT broker
-
-### Quick Start
+4. **Smart Contracts**
 
 ```bash
-# Deploy contracts
 cd stellar_smart_contract
-./deploy.sh
-
-# Start backend
-cd ../backend
-docker-compose up -d
-go run cmd/api/main.go
-
-# Start frontend
-cd ../frontend
-npm install && npm run dev
+soroban contract build
 ```
-
-Open `localhost:3000`, connect Freighter wallet, start trading.
-
-Full setup guide in `/docs/SETUP.md`.
-
----
-
-## Project Structure
-
-```
-Los-Tecnicos/
-├── stellar_smart_contract/    # Soroban contracts (Rust)
-│   ├── energy_token/
-│   ├── marketplace/
-│   ├── network_incentives/
-│   └── governance/
-├── backend/                    # Go API
-│   ├── api/handlers/
-│   ├── core/domain/
-│   ├── pricing/
-│   ├── matching/
-│   └── mqtt/
-├── frontend/                   # Next.js app
-│   ├── app/
-│   ├── components/
-│   └── lib/
-└── docs/                       # Documentation
-```
-
----
-
-## Contributing
-
-Found a bug? Have an idea? PRs welcome.
-
-Areas where help would be appreciated:
-- Real solar panel testing
-- Mobile app development  
-- Regulatory research
-- Documentation improvements
-- Translation (Spanish, Hindi, Mandarin)
-
----
 
 ## Team
-
-Built by Los Tecnicos for Stellar Build-A-Thon.
-
-We're developers who believe blockchain can solve real problems. Energy access is one of them.
-
----
-
-## License
-
-MIT - use it, fork it, improve it.
-
----
-
-## Final Thoughts
-
-The energy system is broken. Utilities are monopolies. Solar owners get ripped off. Buyers overpay. The grid is centralized and fragile.
-
-Blockchain can fix this. Not in theory - in practice. Real hardware, real energy, real trades, real impact.
-
-We built Los Tecnicos to prove it's possible. To show that P2P energy markets can work. To demonstrate that Stellar is the right platform for regulated, high-frequency, micro-transaction markets.
-
-This isn't just a hackathon project. It's a blueprint for the future of energy.
-
-Help us build it.
-
----
-
-**GitHub:** [Los-Tecnicos](https://github.com/blackdragoon26/Los-Tecnicos)  
-**Testnet Contracts:** Deployed and functional  
-**Demo:** Available on request
-
-⚡ Powered by Stellar | Built for communities | Made with determination
-
----
+Built with determination by Los Tecnicos for the Stellar Build-A-Thon. We believe in high-frequency, micro-transaction energy markets powered by the future of finance.
+- @blackdragoon26
+- @AkarshSahlot
+- @abhishek-8081
+License: MIT
