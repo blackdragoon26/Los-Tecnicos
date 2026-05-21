@@ -77,7 +77,7 @@ const config = {
             position: "right",
           },
           {
-            href: "https://los-tecnicos-frontend.vercel.app",
+            href: "https://los-tecnicos.vercel.app",
             label: "Live App",
             position: "right",
           },
@@ -99,7 +99,7 @@ const config = {
             items: [
               {
                 label: "Live App",
-                href: "https://los-tecnicos-frontend.vercel.app",
+                href: "https://los-tecnicos.vercel.app",
               },
               {
                 label: "Backend API",
