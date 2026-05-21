@@ -348,8 +348,8 @@ export default function Landing() {
             © 2026 Stelltron — Decentralized energy for a sustainable future.
           </p>
           <div className="flex gap-5 text-[11px] text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Docs</a>
-            <a href="#" className="hover:text-foreground transition-colors">GitHub</a>
+            <a href="https://stelltron-docs.vercel.app/" className="hover:text-foreground transition-colors">Docs</a>
+            <a href="https://github.com/blackdragoon26/Los-Tecnicos" className="hover:text-foreground transition-colors">GitHub</a>
             <a href="https://x.com/stelltron" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">𝕏</a>
           </div>
         </div>
