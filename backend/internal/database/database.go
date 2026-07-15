@@ -2,9 +2,11 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"los-tecnicos/backend/internal/config"
 	"los-tecnicos/backend/internal/core/domain"
 
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -13,6 +15,9 @@ var DB *gorm.DB
 
 // Connect initializes the database connection and runs auto-migrations.
 func Connect() (*gorm.DB, error) {
+	var db *gorm.DB
+	var err error
+
 	// Check for DATABASE_URL first (common in PaaS like Render)
 	dsn := config.GetEnv("DATABASE_URL", "")
 	if dsn == "" {
@@ -25,9 +30,18 @@ func Connect() (*gorm.DB, error) {
 		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=UTC", host, user, password, dbname, port)
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		if config.GetEnv("DISABLE_SQLITE_FALLBACK", "false") == "true" {
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
+		}
+
+		sqlitePath := config.GetEnv("SQLITE_DB_PATH", "/tmp/los_tecnicos_demo.db")
+		log.Printf("Postgres unavailable (%v). Falling back to SQLite demo database at %s", err, sqlitePath)
+		db, err = gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to SQLite fallback database: %w", err)
+		}
 	}
 
 	// Auto-migrate the schema
