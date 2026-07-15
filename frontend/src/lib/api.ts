@@ -134,6 +134,11 @@ export const iotApi = {
       method: "POST",
       body: JSON.stringify({ device_id: deviceId }),
     }, true),
+  ping: (payload: any) =>
+    request<any>("/iot/ping", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }, true),
   getEventsUrl: () => `${getRootUrl()}/iot/events`,
 };
 

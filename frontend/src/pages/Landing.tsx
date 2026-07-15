@@ -75,7 +75,7 @@ const protocols = [
 ];
 
 export default function Landing() {
-  const { isConnected, connect } = useWallet();
+  const { isConnected, connect, connectDemo } = useWallet();
   const navigate = useNavigate();
 
   const handleConnect = async () => {
@@ -89,6 +89,16 @@ export default function Landing() {
       navigate("/dashboard");
     } catch (err: any) {
       toast.error(err.message || "Failed to connect wallet");
+    }
+  };
+
+  const handleDemoConnect = async () => {
+    try {
+      await connectDemo();
+      toast.success("Demo software wallet ready.");
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start demo wallet");
     }
   };
 
@@ -144,6 +154,11 @@ export default function Landing() {
               <Zap className="w-4 h-4" />
               {isConnected ? "Dashboard" : "Connect Wallet"}
             </Button>
+            {!isConnected && (
+              <Button onClick={handleDemoConnect} variant="secondary" size="lg" className="gap-2 text-sm">
+                Demo Wallet
+              </Button>
+            )}
             <Button
               variant="outline"
               size="lg"

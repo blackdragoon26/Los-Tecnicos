@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Battery,
@@ -9,6 +9,7 @@ import {
   Server,
   Zap,
 } from "lucide-react";
+import { iotApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,9 +35,15 @@ type SimulatorFrame = {
   tick: number;
   busVoltage: number;
   busCurrentMa: number;
-  backendStatus: "demo";
   activeTransferWh: number;
   nodes: SimNode[];
+};
+
+type BackendPingState = {
+  status: "booting" | "ok" | "error";
+  message: string;
+  lastAt: string;
+  commands: Array<{ node_id: string; action: string }>;
 };
 
 const NODE_BASE: Array<Pick<SimNode, "uid" | "ip" | "mac" | "soc">> = [
@@ -99,7 +106,6 @@ const buildFrame = (tick: number): SimulatorFrame => {
     tick,
     busVoltage: Number((suppliers.length ? 5.04 + Math.sin(tick / 3) * 0.04 : 0).toFixed(2)),
     busCurrentMa: Math.max(0, Math.round(busCurrentMa)),
-    backendStatus: "demo",
     activeTransferWh: Number((Math.max(0, busCurrentMa) * 5.03 / 1000 / 1800).toFixed(3)),
     nodes,
   };
@@ -114,38 +120,122 @@ const stateClass: Record<NodeState, string> = {
 
 const relayText = (isOn: boolean) => (isOn ? "LOW / NO closed" : "HIGH / NO open");
 
+const piStateFromNodes = (nodes: SimNode[]) => {
+  if (nodes.some((node) => node.state === "FAULT")) return "FAULT";
+  if (nodes.some((node) => node.state === "RECEIVING")) return "CHARGING";
+  if (nodes.some((node) => node.state === "SUPPLYING")) return "DISCHARGING";
+  return "IDLE";
+};
+
+const buildPiPingPayload = (frame: SimulatorFrame) => {
+  const avgVoltage = frame.nodes.reduce((sum, node) => sum + node.voltage, 0) / frame.nodes.length;
+  const avgSoc = frame.nodes.reduce((sum, node) => sum + node.soc, 0) / frame.nodes.length;
+
+  return {
+    device_id: "rpi-4b-prod-01",
+    voltage: Number(avgVoltage.toFixed(3)),
+    connected_nodes_count: frame.nodes.length,
+    connected_nodes: frame.nodes.map((node) => ({
+      uid: node.uid,
+      voltage: node.voltage,
+    })),
+    battery_level: Number(avgSoc.toFixed(1)),
+    state: piStateFromNodes(frame.nodes),
+    timestamp: new Date().toISOString(),
+    source: "rpi_energy_grid_demo",
+    nodes_detail: frame.nodes.map((node) => ({
+      uid: node.uid,
+      ip: node.ip,
+      state: node.state,
+      voltage: node.voltage,
+      soc: node.soc,
+    })),
+  };
+};
+
 export default function HardwarePingSimulator() {
   const [tick, setTick] = useState(0);
+  const pingInFlight = useRef(false);
+  const mounted = useRef(true);
+  const [backendPing, setBackendPing] = useState<BackendPingState>({
+    status: "booting",
+    message: "Waiting for first backend ping",
+    lastAt: "not sent",
+    commands: [],
+  });
 
   useEffect(() => {
     const interval = window.setInterval(() => setTick((value) => value + 1), 1800);
-    return () => window.clearInterval(interval);
+    return () => {
+      mounted.current = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   const frame = useMemo(() => buildFrame(tick), [tick]);
+  const piPingPayload = useMemo(() => buildPiPingPayload(frame), [frame]);
   const pingPayload = useMemo(
     () => ({
-      device_id: "rpi-4b-prod-01",
-      source: "frontend-hardware-simulator",
-      wlan0: "10.42.0.1/24",
+      ...piPingPayload,
       endpoint: "/iot/ping",
+      device_id: "rpi-4b-prod-01",
+      source: "rpi_energy_grid_demo",
+      wlan0: "10.42.0.1/24",
       bus_voltage: frame.busVoltage,
       bus_current_ma: frame.busCurrentMa,
-      nodes_detail: frame.nodes.map((node) => ({
+      relay_detail: frame.nodes.map((node) => ({
         uid: node.uid,
-        ip: node.ip,
-        mac: node.mac,
-        state: node.state,
-        voltage: node.voltage,
-        soc: node.soc,
-        temp_c: node.tempC,
         relay_25_receive: relayText(node.relay25),
         relay_26_supply: relayText(node.relay26),
+        current_ma: node.currentMa,
+        temp_c: node.tempC,
         last_ping_ms: node.lastPingMs,
       })),
     }),
-    [frame],
+    [frame, piPingPayload],
   );
+
+  useEffect(() => {
+    const postPing = async () => {
+      if (pingInFlight.current) return;
+      pingInFlight.current = true;
+      try {
+        const withTimeout = <T,>(promise: Promise<T>, timeoutMs = 8000) =>
+          Promise.race([
+            promise,
+            new Promise<T>((_, reject) => {
+              window.setTimeout(() => reject(new Error("Backend ping timed out")), timeoutMs);
+            }),
+          ]);
+
+        if (tick % 5 === 0) {
+          await withTimeout(iotApi.ping({ device_id: piPingPayload.device_id, status: "heartbeat" }));
+        }
+        const response = await withTimeout(iotApi.ping(piPingPayload));
+        if (mounted.current) {
+          setBackendPing({
+            status: "ok",
+            message: response?.type === "node_data" ? "Backend accepted node_data" : "Backend accepted ping",
+            lastAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            commands: response?.commands || [],
+          });
+        }
+      } catch (err: any) {
+        if (mounted.current) {
+          setBackendPing({
+            status: "error",
+            message: err?.message || "Backend ping failed",
+            lastAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            commands: [],
+          });
+        }
+      } finally {
+        pingInFlight.current = false;
+      }
+    };
+
+    postPing();
+  }, [piPingPayload, tick]);
 
   return (
     <section className="mt-6 space-y-5">
@@ -156,9 +246,21 @@ export default function HardwarePingSimulator() {
             <Badge variant="outline" className="border-primary/40 bg-primary/10 text-[10px] text-primary">
               demo mode
             </Badge>
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${
+                backendPing.status === "ok"
+                  ? "border-primary/40 text-primary"
+                  : backendPing.status === "error"
+                    ? "border-destructive/50 text-destructive"
+                    : "border-border text-muted-foreground"
+              }`}
+            >
+              backend {backendPing.status}
+            </Badge>
           </div>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Client-side ESP32 and Raspberry Pi telemetry for product demos when the physical grid is offline.
+            Client-side ESP32 and Raspberry Pi telemetry that posts real Pi-shaped pings into the backend.
           </p>
         </div>
         <a href="https://www.youtube.com/watch?v=nVcThM8WkUQ&t=7s" target="_blank" rel="noreferrer">
@@ -190,8 +292,9 @@ export default function HardwarePingSimulator() {
         </Card>
         <Card>
           <CardContent className="pb-3 pt-4">
-            <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">Ping Cadence</p>
-            <p className="font-mono text-lg font-bold">1.8s</p>
+            <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">Backend Ping</p>
+            <p className="font-mono text-lg font-bold">{backendPing.status === "ok" ? "online" : backendPing.status}</p>
+            <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{backendPing.lastAt}</p>
           </CardContent>
         </Card>
       </div>
@@ -287,6 +390,19 @@ export default function HardwarePingSimulator() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Backend response</span>
+                <span className={`font-mono text-[10px] ${backendPing.status === "ok" ? "text-primary" : backendPing.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                  {backendPing.message}
+                </span>
+              </div>
+              {backendPing.commands.length > 0 && (
+                <p className="mt-1 font-mono text-[10px] text-primary">
+                  commands: {backendPing.commands.map((cmd) => `${cmd.node_id}:${cmd.action}`).join(", ")}
+                </p>
+              )}
+            </div>
             <pre className="max-h-[360px] overflow-auto rounded-md border border-border/50 bg-background/80 p-3 text-[10px] leading-relaxed text-muted-foreground">
               {JSON.stringify(pingPayload, null, 2)}
             </pre>

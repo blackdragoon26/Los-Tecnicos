@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowUpRight, ArrowDownLeft, Search, Calculator } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Search, Calculator, Plus, Wallet } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
 import { analyticsApi, marketApi } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -15,15 +15,48 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import EnergyTransferModal from "@/components/EnergyTransferModal";
 
+const DEMO_SEED_ORDERS = [
+  {
+    id: "demo-ask-node-a",
+    user_id: "NODE_A",
+    type: "sell",
+    kwh_amount: 2.4,
+    token_price: 0.548,
+    status: "Created",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-bid-community",
+    user_id: "demo-community-buyer",
+    type: "buy",
+    kwh_amount: 1.8,
+    token_price: 0.532,
+    status: "Created",
+    created_at: new Date().toISOString(),
+  },
+];
+
+const readStoredDemoOrders = () => {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem("stelltron_demo_orders") || "[]");
+    return stored.length > 0 ? stored : DEMO_SEED_ORDERS;
+  } catch {
+    return DEMO_SEED_ORDERS;
+  }
+};
+
 export default function Marketplace() {
-  const { user, isConnected, publicKey } = useWallet();
+  const { user, isConnected, publicKey, isDemo, demoBalance, topUpDemoBalance, debitDemoBalance } = useWallet();
   const [orders, setOrders] = useState<any[]>([]);
   const [sellAmount, setSellAmount] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [buyAmount, setBuyAmount] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
+  const [topUpAmount, setTopUpAmount] = useState("100");
   const [marketData, setMarketData] = useState<any>(null);
   const [marketHistory, setMarketHistory] = useState<any[]>([]);
+  const [demoOrders, setDemoOrders] = useState<any[]>(readStoredDemoOrders);
+  const [demoMarketMode, setDemoMarketMode] = useState<"backend" | "local">("backend");
   const [activeTransfer, setActiveTransfer] = useState<any>(null);
   const [seenTxIds, setSeenTxIds] = useState<Set<string>>(() => {
     try {
@@ -34,36 +67,65 @@ export default function Marketplace() {
   });
 
   const isAuthenticated = isConnected;
+  const pushMarketHistoryPoint = useCallback((price: number, timestamp = Date.now()) => {
+    setMarketHistory((prev) => {
+      const newPoint = {
+        price,
+        timestamp: new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit", minute: "2-digit", second: "2-digit",
+        }),
+      };
+      const updated = [...prev, newPoint];
+      return updated.length > 50 ? updated.slice(-50) : updated;
+    });
+  }, []);
+
+  const synthesizeDemoMarket = useCallback(() => {
+    const base = demoOrders.find((order) => order.type === "sell")?.token_price || 0.5;
+    const supply = demoOrders.filter((order) => order.type === "sell").length;
+    const demand = demoOrders.filter((order) => order.type === "buy").length;
+    const price = Number((base + demand * 0.012 - supply * 0.006 + Math.sin(Date.now() / 12000) * 0.008).toFixed(4));
+    const nextData = {
+      price,
+      supply,
+      demand,
+      timestamp: new Date().toISOString(),
+      breakdown: { f_demo_liquidity: demand + supply, f_demo_variance: 0.008 },
+    };
+    setMarketData(nextData);
+    setBuyPrice((prev) => prev || price.toFixed(4));
+    setSellPrice((prev) => prev || price.toFixed(4));
+    pushMarketHistoryPoint(price);
+  }, [demoOrders, pushMarketHistoryPoint]);
 
   const fetchMarketData = useCallback(async () => {
     try {
       const priceRes = await marketApi.getMarketPrice();
       const newData = priceRes.data ?? priceRes;
       setMarketData(newData);
+      setDemoMarketMode("backend");
       // Seed price inputs from market price on first load only
       setBuyPrice((prev) => prev || String(parseFloat(newData.price).toFixed(4)));
       setSellPrice((prev) => prev || String(parseFloat(newData.price).toFixed(4)));
-      setMarketHistory((prev) => {
-        const newPoint = {
-          price: newData.price,
-          timestamp: new Date(newData.timestamp || Date.now()).toLocaleTimeString([], {
-            hour: "2-digit", minute: "2-digit", second: "2-digit",
-          }),
-        };
-        const updated = [...prev, newPoint];
-        return updated.length > 50 ? updated.slice(-50) : updated;
-      });
+      pushMarketHistoryPoint(newData.price, newData.timestamp ? new Date(newData.timestamp).getTime() : Date.now());
     } catch (err) {
       console.error("Failed to fetch market data:", err);
+      if (isDemo) {
+        setDemoMarketMode("local");
+        synthesizeDemoMarket();
+      }
     }
-  }, []);
+  }, [isDemo, pushMarketHistoryPoint, synthesizeDemoMarket]);
 
   const fetchOrders = useCallback(async () => {
     try {
       const res = await marketApi.getOrders();
       setOrders((res as any).data ?? res ?? []);
-    } catch { }
-  }, []);
+      setDemoMarketMode("backend");
+    } catch {
+      if (isDemo) setDemoMarketMode("local");
+    }
+  }, [isDemo]);
 
   // Poll for matched transactions to trigger energy transfer modal
   const pollTransactions = useCallback(async () => {
@@ -119,32 +181,88 @@ export default function Marketplace() {
   const handleCreateOrder = async (type: "buy" | "sell") => {
     const amount = type === "sell" ? sellAmount : buyAmount;
     const price = type === "sell" ? sellPrice : buyPrice;
-    if (!amount || !price || !publicKey) return;
+    const actorKey = publicKey || (isDemo ? "demo-software-wallet" : "");
+    if (!amount || !price || !actorKey) {
+      toast.error("Wallet session is not ready yet.");
+      return;
+    }
+    const total = parseFloat(amount) * parseFloat(price);
+    if (!Number.isFinite(total) || total <= 0) return;
 
     try {
-      const freighterApi = await import("@stellar/freighter-api");
-      if (!(await freighterApi.isConnected())) {
-        toast.error("Freighter wallet not connected.");
+      if (!isDemo) {
+        const freighterApi = await import("@stellar/freighter-api");
+        if (!(await freighterApi.isConnected())) {
+          toast.error("Freighter wallet not connected.");
+          return;
+        }
+
+        const contractId = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID || "CCRWH4Q2OYXZDZFOG7EDPDKHLB7ZMIQ3SNAJY25C5SPAGHPHEWYXVCTP";
+        if (!contractId || contractId.includes("XXXX")) {
+          toast.error("Missing VITE_MARKETPLACE_CONTRACT_ID.");
+          return;
+        }
+      } else if (type === "buy" && demoBalance < total) {
+        toast.error("Demo wallet balance is too low. Add LT before placing this bid.");
         return;
       }
 
-      const contractId = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID || "CCRWH4Q2OYXZDZFOG7EDPDKHLB7ZMIQ3SNAJY25C5SPAGHPHEWYXVCTP";
-      if (!contractId || contractId.includes("XXXX")) {
-        toast.error("Missing VITE_MARKETPLACE_CONTRACT_ID.");
-        return;
+      toast.info(isDemo ? `Creating demo ${type} order...` : `Creating ${type} order on Los Tecnicos network...`);
+
+      let backendOrder: any = null;
+      try {
+        backendOrder = await marketApi.createOrder({
+          type,
+          kwh_amount: parseFloat(amount),
+          token_price: parseFloat(price),
+        });
+        setDemoMarketMode("backend");
+      } catch (err) {
+        if (!isDemo) throw err;
+        setDemoMarketMode("local");
       }
 
-      toast.info(`Creating ${type} order on Los Tecnicos network...`);
+      if (isDemo) {
+        const order = backendOrder?.id
+          ? backendOrder
+          : {
+              id: `demo-${Date.now()}`,
+              user_id: actorKey,
+              type,
+              kwh_amount: parseFloat(amount),
+              token_price: parseFloat(price),
+              status: "Created",
+              created_at: new Date().toISOString(),
+            };
+        setDemoOrders((current) => {
+          const next = [order, ...current].slice(0, 20);
+          try {
+            sessionStorage.setItem("stelltron_demo_orders", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        setMarketData((current: any) => ({
+          ...(current || {}),
+          price: parseFloat(price),
+          timestamp: new Date().toISOString(),
+          supply: type === "sell" ? (current?.supply || 0) + 1 : current?.supply || 0,
+          demand: type === "buy" ? (current?.demand || 0) + 1 : current?.demand || 0,
+        }));
+        pushMarketHistoryPoint(parseFloat(price));
+      }
 
-      await marketApi.createOrder({
-        type,
-        kwh_amount: parseFloat(amount),
-        token_price: parseFloat(price),
-      });
+      if (isDemo && type === "buy") {
+        debitDemoBalance(total);
+      }
 
       toast.success(`${type.toUpperCase()} order placed @ ${parseFloat(price).toFixed(4)} XLM/kWh`);
-      await fetchOrders();
-      await fetchMarketData();
+      if (isDemo) {
+        void fetchOrders();
+        void fetchMarketData();
+      } else {
+        await fetchOrders();
+        await fetchMarketData();
+      }
       if (type === "sell") {
         setSellAmount("");
       } else {
@@ -157,8 +275,14 @@ export default function Marketplace() {
   };
 
   const currentPrice = marketData?.price || 0;
-  const sellOrders = orders.filter((o) => o.type === "sell").slice(0, 10);
-  const buyOrders = orders.filter((o) => o.type === "buy").slice(0, 10);
+  const storedDemoOrders = isDemo ? readStoredDemoOrders() : [];
+  const mergedDemoOrders = [...demoOrders, ...storedDemoOrders].filter(
+    (order, index, all) => all.findIndex((candidate) => candidate.id === order.id) === index,
+  );
+  const displayOrders = isDemo ? [...mergedDemoOrders, ...orders] : orders;
+  const sellOrders = displayOrders.filter((o) => o.type === "sell").slice(0, 10);
+  const buyOrders = displayOrders.filter((o) => o.type === "buy").slice(0, 10);
+  const buyTotal = buyAmount && buyPrice ? parseFloat(buyAmount) * parseFloat(buyPrice) : 0;
 
   if (!isAuthenticated) {
     return (
@@ -196,6 +320,11 @@ export default function Marketplace() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isDemo && (
+              <Badge variant="outline" className="h-8 border-primary/30 bg-primary/10 px-3 text-[10px] text-primary">
+                Software wallet · {demoMarketMode === "backend" ? "backend" : "local demo"}
+              </Badge>
+            )}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3 h-3" />
               <Input placeholder="Search…" className="pl-7 w-48 h-8 text-xs" />
@@ -210,6 +339,48 @@ export default function Marketplace() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
+            {isDemo && (
+              <Card>
+                <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10">
+                      <Wallet className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium">Demo Software Wallet</p>
+                      <p className="font-mono text-lg font-bold">{demoBalance.toFixed(2)} LT</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={topUpAmount}
+                      onChange={(e) => setTopUpAmount(e.target.value)}
+                      className="h-8 w-24 font-mono text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => {
+                        const value = Number(topUpAmount);
+                        if (!Number.isFinite(value) || value <= 0) {
+                          toast.error("Enter a valid top-up amount.");
+                          return;
+                        }
+                        topUpDemoBalance(value);
+                        toast.success(`Added ${value.toFixed(2)} LT to demo wallet`);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add LT
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Chart */}
             <Card>
               <CardHeader className="pb-1">
@@ -253,90 +424,109 @@ export default function Marketplace() {
 
                   {/* ── BUY TAB ── */}
                   <TabsContent value="buy" className="mt-4 space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={buyAmount}
-                        onChange={(e) => setBuyAmount(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">
-                        Limit Price (XLM/kWh)
-                        <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
-                          — editable
-                        </span>
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
-                        value={buyPrice}
-                        onChange={(e) => setBuyPrice(e.target.value)}
-                        className="h-9 font-mono"
-                      />
-                    </div>
-                    {buyAmount && buyPrice && parseFloat(buyPrice) > 0 && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Total: <span className="font-medium text-foreground font-mono">
-                          {(parseFloat(buyAmount) * parseFloat(buyPrice)).toFixed(4)} XLM
-                        </span>
-                      </p>
-                    )}
-                    <Button
-                      onClick={() => handleCreateOrder("buy")}
-                      className="w-full text-xs h-9"
-                      disabled={!buyAmount || !buyPrice}
+                    <form
+                      className="space-y-3"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        handleCreateOrder("buy");
+                      }}
                     >
-                      Place Buy Order
-                    </Button>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={buyAmount}
+                          onChange={(e) => setBuyAmount(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider">
+                          Limit Price (XLM/kWh)
+                          <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
+                            — editable
+                          </span>
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
+                          value={buyPrice}
+                          onChange={(e) => setBuyPrice(e.target.value)}
+                          className="h-9 font-mono"
+                        />
+                      </div>
+                      {buyAmount && buyPrice && parseFloat(buyPrice) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Total: <span className="font-medium text-foreground font-mono">
+                            {buyTotal.toFixed(4)} {isDemo ? "LT" : "XLM"}
+                          </span>
+                          {isDemo && buyTotal > demoBalance && (
+                            <span className="ml-2 text-destructive">insufficient demo balance</span>
+                          )}
+                        </p>
+                      )}
+                      <Button
+                        type="submit"
+                        className="w-full text-xs h-9"
+                        disabled={!buyAmount || !buyPrice || (isDemo && buyTotal > demoBalance)}
+                      >
+                        {isDemo ? "Place Demo Buy Order" : "Place Buy Order"}
+                      </Button>
+                    </form>
                   </TabsContent>
 
                   {/* ── SELL TAB ── */}
                   <TabsContent value="sell" className="mt-4 space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={sellAmount}
-                        onChange={(e) => setSellAmount(e.target.value)}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase tracking-wider">
-                        Ask Price (XLM/kWh)
-                        <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
-                          — editable
-                        </span>
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
-                        value={sellPrice}
-                        onChange={(e) => setSellPrice(e.target.value)}
-                        className="h-9 font-mono"
-                      />
-                    </div>
-                    {sellAmount && sellPrice && parseFloat(sellPrice) > 0 && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Total: <span className="font-medium text-foreground font-mono">
-                          {(parseFloat(sellAmount) * parseFloat(sellPrice)).toFixed(4)} XLM
-                        </span>
-                      </p>
-                    )}
-                    <Button
-                      onClick={() => handleCreateOrder("sell")}
-                      className="w-full text-xs h-9"
-                      disabled={!sellAmount || !sellPrice}
+                    <form
+                      className="space-y-3"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        handleCreateOrder("sell");
+                      }}
                     >
-                      Place Sell Order
-                    </Button>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider">Amount (kWh)</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={sellAmount}
+                          onChange={(e) => setSellAmount(e.target.value)}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider">
+                          Ask Price (XLM/kWh)
+                          <span className="ml-1 text-muted-foreground normal-case tracking-normal font-normal">
+                            — editable
+                          </span>
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          placeholder={currentPrice > 0 ? currentPrice.toFixed(4) : "0.0000"}
+                          value={sellPrice}
+                          onChange={(e) => setSellPrice(e.target.value)}
+                          className="h-9 font-mono"
+                        />
+                      </div>
+                      {sellAmount && sellPrice && parseFloat(sellPrice) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Total: <span className="font-medium text-foreground font-mono">
+                            {(parseFloat(sellAmount) * parseFloat(sellPrice)).toFixed(4)} {isDemo ? "LT" : "XLM"}
+                          </span>
+                        </p>
+                      )}
+                      <Button
+                        type="submit"
+                        className="w-full text-xs h-9"
+                        disabled={!sellAmount || !sellPrice}
+                      >
+                        {isDemo ? "Place Demo Sell Order" : "Place Sell Order"}
+                      </Button>
+                    </form>
                   </TabsContent>
                 </Tabs>
               </CardContent>

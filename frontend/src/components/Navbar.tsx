@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useWallet } from "@/contexts/WalletContext";
 import { Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -12,7 +13,7 @@ import {
 import stelltronLogo from "@/assets/stelltron-logo-new.png";
 
 export default function Navbar() {
-  const { isConnected, publicKey, disconnect } = useWallet();
+  const { isConnected, publicKey, disconnect, isDemo, demoBalance } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -71,6 +72,11 @@ export default function Navbar() {
                 </TooltipTrigger>
                 <TooltipContent><p className="text-xs font-mono">{publicKey}</p></TooltipContent>
               </Tooltip>
+              {isDemo && (
+                <Badge variant="outline" className="h-7 border-primary/30 text-[10px] text-primary">
+                  Demo {demoBalance.toFixed(2)} LT
+                </Badge>
+              )}
               <Button variant="ghost" size="icon" onClick={disconnect} className="h-7 w-7">
                 <LogOut className="w-3.5 h-3.5" />
               </Button>
@@ -105,7 +111,9 @@ export default function Navbar() {
             <Separator className="my-2" />
             {isConnected ? (
               <div className="flex items-center justify-between px-3">
-                <span className="text-xs font-mono text-muted-foreground">{truncatedKey}</span>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {isDemo ? `Demo ${demoBalance.toFixed(2)} LT` : truncatedKey}
+                </span>
                 <Button variant="ghost" size="sm" onClick={disconnect} className="text-xs">
                   Disconnect
                 </Button>
