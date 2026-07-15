@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import HardwarePingSimulator from "@/components/HardwarePingSimulator";
 
 const DEVICE_ID = "rpi-4b-prod-01";
 
@@ -36,15 +37,17 @@ export default function NetworkPage() {
   const topNodes = nodes.slice(0, 8).map((n: any) => ({
     name: n.uid,
     location: n.ip || "Local",
-    voltage: n.voltage.toFixed(2),
-    soc: n.soc.toFixed(1),
+    voltage: Number(n.voltage || 0).toFixed(2),
+    soc: Number(n.soc || 0).toFixed(1),
   }));
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4">
       <div className="container mx-auto max-w-5xl">
         <h1 className="text-xl font-bold text-foreground tracking-tight mb-1">Network</h1>
-        <p className="text-xs text-muted-foreground mb-6">Global mesh overview.</p>
+        <p className="text-xs text-muted-foreground mb-6">
+          Global mesh overview with a built-in demo mode for the ESP32 energy-grid hardware.
+        </p>
 
         <div className="grid grid-cols-3 gap-3 mb-8">
           {networkStats.map((s) => (
@@ -88,7 +91,9 @@ export default function NetworkPage() {
           <Card className="lg:col-span-2">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-xs">Live Nodes</CardTitle>
-              <Badge variant="outline" className="text-[9px] border-primary/30 text-primary">{topNodes.length} online</Badge>
+              <Badge variant="outline" className="text-[9px] border-primary/30 text-primary">
+                {topNodes.length > 0 ? `${topNodes.length} online` : "simulator ready"}
+              </Badge>
             </CardHeader>
             <CardContent className="p-0">
               {topNodes.length > 0 ? (
@@ -119,11 +124,18 @@ export default function NetworkPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-8">No live nodes.</p>
+                <div className="px-5 py-8 text-center">
+                  <p className="text-xs font-medium text-foreground">No physical nodes are live.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Use the simulator below to showcase realistic Pi-to-ESP32 pings.
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
+
+        <HardwarePingSimulator />
       </div>
     </div>
   );
