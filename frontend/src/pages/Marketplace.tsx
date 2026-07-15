@@ -45,6 +45,14 @@ const readStoredDemoOrders = () => {
   }
 };
 
+const withDemoTimeout = <T,>(promise: Promise<T>, timeoutMs = 3500) =>
+  Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error("Backend demo request timed out")), timeoutMs);
+    }),
+  ]);
+
 export default function Marketplace() {
   const { user, isConnected, publicKey, isDemo, demoBalance, topUpDemoBalance, debitDemoBalance } = useWallet();
   const [orders, setOrders] = useState<any[]>([]);
@@ -100,7 +108,7 @@ export default function Marketplace() {
 
   const fetchMarketData = useCallback(async () => {
     try {
-      const priceRes = await marketApi.getMarketPrice();
+      const priceRes = await withDemoTimeout(marketApi.getMarketPrice());
       const newData = priceRes.data ?? priceRes;
       setMarketData(newData);
       setDemoMarketMode("backend");
@@ -119,7 +127,7 @@ export default function Marketplace() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await marketApi.getOrders();
+      const res = await withDemoTimeout(marketApi.getOrders());
       setOrders((res as any).data ?? res ?? []);
       setDemoMarketMode("backend");
     } catch {
@@ -164,6 +172,10 @@ export default function Marketplace() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      if (isDemo) {
+        setDemoMarketMode("local");
+        synthesizeDemoMarket();
+      }
       fetchOrders();
       fetchMarketData();
       const marketInterval = setInterval(() => {
@@ -176,7 +188,7 @@ export default function Marketplace() {
         clearInterval(txInterval);
       };
     }
-  }, [isAuthenticated, fetchMarketData, fetchOrders, pollTransactions]);
+  }, [isAuthenticated, isDemo, fetchMarketData, fetchOrders, pollTransactions, synthesizeDemoMarket]);
 
   const handleCreateOrder = async (type: "buy" | "sell") => {
     const amount = type === "sell" ? sellAmount : buyAmount;

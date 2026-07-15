@@ -120,6 +120,18 @@ const stateClass: Record<NodeState, string> = {
 
 const relayText = (isOn: boolean) => (isOn ? "LOW / NO closed" : "HIGH / NO open");
 
+const backendBadgeLabel = (status: BackendPingState["status"]) => {
+  if (status === "ok") return "backend ok";
+  if (status === "error") return "local sim active";
+  return "backend connecting";
+};
+
+const backendCardLabel = (status: BackendPingState["status"]) => {
+  if (status === "ok") return "online";
+  if (status === "error") return "local sim";
+  return "connecting";
+};
+
 const piStateFromNodes = (nodes: SimNode[]) => {
   if (nodes.some((node) => node.state === "FAULT")) return "FAULT";
   if (nodes.some((node) => node.state === "RECEIVING")) return "CHARGING";
@@ -256,7 +268,7 @@ export default function HardwarePingSimulator() {
                     : "border-border text-muted-foreground"
               }`}
             >
-              backend {backendPing.status}
+              {backendBadgeLabel(backendPing.status)}
             </Badge>
           </div>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -293,7 +305,7 @@ export default function HardwarePingSimulator() {
         <Card>
           <CardContent className="pb-3 pt-4">
             <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">Backend Ping</p>
-            <p className="font-mono text-lg font-bold">{backendPing.status === "ok" ? "online" : backendPing.status}</p>
+            <p className="font-mono text-lg font-bold">{backendCardLabel(backendPing.status)}</p>
             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{backendPing.lastAt}</p>
           </CardContent>
         </Card>
