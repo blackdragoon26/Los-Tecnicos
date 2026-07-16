@@ -30,48 +30,48 @@ const features = [
     icon: Battery,
     title: "Donate",
     code: "STL-001",
-    description: "Tokenize surplus solar or wind energy on the Stellar blockchain and share with your community.",
+    description: "Donor homes publish surplus battery energy through the controller hardware and make it available to nearby receivers.",
   },
   {
     icon: Repeat,
     title: "Trade",
     code: "STL-002",
-    description: "Peer-to-peer energy marketplace. No middlemen, transparent pricing, instant settlement.",
+    description: "Receivers lock app-wallet funds, donor hardware supplies verified kWh, and the marketplace settles the transfer.",
   },
   {
     icon: Users,
     title: "Power",
     code: "STL-003",
-    description: "Direct energy to those who need it. Build a decentralized green grid together.",
+    description: "Local mesh servers coordinate nearby donor and receiver kits so energy can move where it is needed.",
   },
 ];
 
 const stats = [
   { label: "Nodes", value: "1,240", suffix: "+", detail: "Active grid nodes across 12 regions" },
   { label: "Traded", value: "58", suffix: " MWh", detail: "Total energy volume this quarter" },
-  { label: "Donors", value: "320", suffix: "", detail: "Verified energy producers on-chain" },
-  { label: "Txns", value: "12.8k", suffix: "+", detail: "Settled transactions on the Stellar network" },
+  { label: "Donors", value: "320", suffix: "", detail: "Verified energy producers with controller kits" },
+  { label: "Txns", value: "12.8k", suffix: "+", detail: "App-wallet energy settlements processed" },
 ];
 
 const faqs = [
   {
     q: "How does energy trading work?",
-    a: "Producers tokenize their surplus energy on the Stellar blockchain. Buyers purchase tokens representing real kWh. Smart contracts handle settlement automatically.",
+    a: "Donor hardware reports stored energy to a local mesh server. Receivers lock app-wallet funds, the controller supplies verified kWh, and the software settles the transfer.",
   },
   {
     q: "What hardware do I need?",
-    a: "Our Stelltron Power Kit (ESP32-based controller) connects your battery to the network. It monitors levels, executes trades, and controls energy flow.",
+    a: "Users buy a donor-receiver controller kit for their room or home. A local mesh server coordinates nearby kits and relays pings between mesh areas.",
   },
   {
     q: "Is it really decentralized?",
-    a: "Yes. All transactions happen on the Stellar network with Soroban smart contracts. No central authority controls the marketplace or pricing.",
+    a: "The energy layer is local-first: nearby mesh servers discover kits, coordinate supply and receive paths, and keep the market running even when live hardware is unavailable in demo mode.",
   },
 ];
 
 const protocols = [
   { icon: Lock, label: "End-to-end encrypted", status: "ACTIVE" },
   { icon: Radio, label: "Mesh relay protocol", status: "ACTIVE" },
-  { icon: Eye, label: "On-chain audit trail", status: "MONITORING" },
+  { icon: Eye, label: "App-wallet settlement log", status: "MONITORING" },
 ];
 
 export default function Landing() {
@@ -92,10 +92,10 @@ export default function Landing() {
     }
   };
 
-  const handleDemoConnect = async () => {
+  const handleDemoConnect = async (profile: "donor" | "receiver") => {
     try {
-      await connectDemo();
-      toast.success("Demo software wallet ready.");
+      await connectDemo(profile);
+      toast.success(`${profile === "donor" ? "Donor" : "Receiver"} demo wallet ready.`);
       navigate("/dashboard");
     } catch (err: any) {
       toast.error(err.message || "Failed to start demo wallet");
@@ -130,9 +130,9 @@ export default function Landing() {
           </h1>
 
           <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-            Trade renewable energy peer-to-peer on the <a href="https://stellar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Stellar</a> blockchain.
+            Donate or trade surplus stored energy through local donor-receiver hardware and mesh servers.
             <br />
-            <span className="font-mono text-[10px]">No middlemen. No waste. Just clean power.</span>
+            <span className="font-mono text-[10px]">App wallet funds. Hardware pings. Verified kWh delivery.</span>
           </p>
 
           {/* Redacted intel line */}
@@ -143,8 +143,8 @@ export default function Landing() {
                 <span className="redacted px-6 cursor-help">██████████</span>
               </HoverCardTrigger>
               <HoverCardContent className="w-48">
-                <p className="text-xs font-mono"><a href="https://stellar.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@StellarOrg</a> — Mainnet</p>
-                <p className="text-[10px] text-muted-foreground mt-1">Classification pending review</p>
+                <p className="text-xs font-mono"><a href="https://www.youtube.com/watch?v=nVcThM8WkUQ&t=7s" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Hardware demo video</a></p>
+                <p className="text-[10px] text-muted-foreground mt-1">ESP32 node and local Pi controller reference</p>
               </HoverCardContent>
             </HoverCard>
           </div>
@@ -155,9 +155,14 @@ export default function Landing() {
               {isConnected ? "Dashboard" : "Connect Wallet"}
             </Button>
             {!isConnected && (
-              <Button onClick={handleDemoConnect} variant="secondary" size="lg" className="gap-2 text-sm">
-                Demo Wallet
-              </Button>
+              <>
+                <Button onClick={() => handleDemoConnect("receiver")} variant="secondary" size="lg" className="gap-2 text-sm">
+                  Receiver Demo
+                </Button>
+                <Button onClick={() => handleDemoConnect("donor")} variant="outline" size="lg" className="gap-2 text-sm">
+                  Donor Demo
+                </Button>
+              </>
             )}
             <Button
               variant="outline"

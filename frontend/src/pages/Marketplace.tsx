@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowUpRight, ArrowDownLeft, Search, Calculator, Plus, Wallet } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Search, Calculator, Plus, Wallet, Lock, CheckCircle2, Zap } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
 import { analyticsApi, marketApi } from "@/lib/api";
 import { Link } from "react-router-dom";
@@ -54,7 +54,18 @@ const withDemoTimeout = <T,>(promise: Promise<T>, timeoutMs = 3500) =>
   ]);
 
 export default function Marketplace() {
-  const { user, isConnected, publicKey, isDemo, demoBalance, topUpDemoBalance, debitDemoBalance } = useWallet();
+  const {
+    user,
+    isConnected,
+    publicKey,
+    appWalletId,
+    isDemo,
+    demoProfile,
+    demoBalance,
+    topUpDemoBalance,
+    debitDemoBalance,
+    switchDemoProfile,
+  } = useWallet();
   const [orders, setOrders] = useState<any[]>([]);
   const [sellAmount, setSellAmount] = useState("");
   const [sellPrice, setSellPrice] = useState("");
@@ -65,6 +76,7 @@ export default function Marketplace() {
   const [marketHistory, setMarketHistory] = useState<any[]>([]);
   const [demoOrders, setDemoOrders] = useState<any[]>(readStoredDemoOrders);
   const [demoMarketMode, setDemoMarketMode] = useState<"backend" | "local">("backend");
+  const [demoTradeStep, setDemoTradeStep] = useState<"open" | "locked" | "transferring" | "settled">("open");
   const [activeTransfer, setActiveTransfer] = useState<any>(null);
   const [seenTxIds, setSeenTxIds] = useState<Set<string>>(() => {
     try {
@@ -193,7 +205,7 @@ export default function Marketplace() {
   const handleCreateOrder = async (type: "buy" | "sell") => {
     const amount = type === "sell" ? sellAmount : buyAmount;
     const price = type === "sell" ? sellPrice : buyPrice;
-    const actorKey = publicKey || (isDemo ? "demo-software-wallet" : "");
+    const actorKey = appWalletId || publicKey || (isDemo ? `demo-${demoProfile || "wallet"}` : "");
     if (!amount || !price || !actorKey) {
       toast.error("Wallet session is not ready yet.");
       return;
@@ -295,6 +307,7 @@ export default function Marketplace() {
   const sellOrders = displayOrders.filter((o) => o.type === "sell").slice(0, 10);
   const buyOrders = displayOrders.filter((o) => o.type === "buy").slice(0, 10);
   const buyTotal = buyAmount && buyPrice ? parseFloat(buyAmount) * parseFloat(buyPrice) : 0;
+  const demoTransferPrice = 1.8 * 0.532;
 
   if (!isAuthenticated) {
     return (
@@ -334,7 +347,7 @@ export default function Marketplace() {
           <div className="flex items-center gap-2">
             {isDemo && (
               <Badge variant="outline" className="h-8 border-primary/30 bg-primary/10 px-3 text-[10px] text-primary">
-                Software wallet · {demoMarketMode === "backend" ? "backend" : "local demo"}
+                App wallet · {demoMarketMode === "backend" ? "backend" : "local demo"}
               </Badge>
             )}
             <div className="relative">
@@ -353,41 +366,133 @@ export default function Marketplace() {
           <div className="lg:col-span-2 space-y-5">
             {isDemo && (
               <Card>
-                <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10">
-                      <Wallet className="h-4 w-4 text-primary" />
+                <CardContent className="space-y-4 pt-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10">
+                        <Wallet className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium">Stelltron App Wallet</p>
+                        <p className="font-mono text-lg font-bold">{demoBalance.toFixed(2)} LT</p>
+                        <p className="font-mono text-[10px] text-muted-foreground">{demoProfile === "donor" ? "Demo donor account" : "Demo receiver account"}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium">Demo Software Wallet</p>
-                      <p className="font-mono text-lg font-bold">{demoBalance.toFixed(2)} LT</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant={demoProfile === "receiver" ? "default" : "outline"}
+                        className="h-8 text-xs"
+                        onClick={() => switchDemoProfile("receiver")}
+                      >
+                        Receiver
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={demoProfile === "donor" ? "default" : "outline"}
+                        className="h-8 text-xs"
+                        onClick={() => switchDemoProfile("donor")}
+                      >
+                        Donor
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={topUpAmount}
+                        onChange={(e) => setTopUpAmount(e.target.value)}
+                        className="h-8 w-24 font-mono text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1.5 text-xs"
+                        onClick={() => {
+                          const value = Number(topUpAmount);
+                          if (!Number.isFinite(value) || value <= 0) {
+                            toast.error("Enter a valid top-up amount.");
+                            return;
+                          }
+                          topUpDemoBalance(value);
+                          toast.success(`Added ${value.toFixed(2)} LT to ${demoProfile === "donor" ? "donor" : "receiver"} app wallet`);
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add LT
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={topUpAmount}
-                      onChange={(e) => setTopUpAmount(e.target.value)}
-                      className="h-8 w-24 font-mono text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1.5 text-xs"
-                      onClick={() => {
-                        const value = Number(topUpAmount);
-                        if (!Number.isFinite(value) || value <= 0) {
-                          toast.error("Enter a valid top-up amount.");
-                          return;
-                        }
-                        topUpDemoBalance(value);
-                        toast.success(`Added ${value.toFixed(2)} LT to demo wallet`);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add LT
-                    </Button>
+
+                  <div className="rounded-md border border-border/50 bg-background/40 p-3">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-medium">Two-user demo trade</p>
+                        <p className="text-[11px] text-muted-foreground">Receiver locks LT, donor hardware supplies 1.8 kWh, then funds settle.</p>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] border-primary/30 text-primary">{demoTradeStep}</Badge>
+                    </div>
+                    <div className="mb-3 grid grid-cols-3 gap-2 text-[10px]">
+                      <div className="rounded bg-muted/30 p-2">
+                        <p className="uppercase tracking-widest text-muted-foreground">Donor</p>
+                        <p className="font-mono text-foreground">NODE_A</p>
+                      </div>
+                      <div className="rounded bg-muted/30 p-2">
+                        <p className="uppercase tracking-widest text-muted-foreground">Receiver</p>
+                        <p className="font-mono text-foreground">Community Buyer</p>
+                      </div>
+                      <div className="rounded bg-muted/30 p-2">
+                        <p className="uppercase tracking-widest text-muted-foreground">Escrow</p>
+                        <p className="font-mono text-foreground">{demoTransferPrice.toFixed(4)} LT</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs"
+                        disabled={demoTradeStep !== "open"}
+                        onClick={() => {
+                          if (demoProfile !== "receiver") {
+                            toast.error("Switch to Receiver account to lock buyer funds.");
+                            return;
+                          }
+                          if (!debitDemoBalance(demoTransferPrice)) {
+                            toast.error("Receiver wallet needs more LT.");
+                            return;
+                          }
+                          setDemoTradeStep("locked");
+                          toast.success("Receiver funds locked in app escrow.");
+                        }}
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                        Lock receiver funds
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1.5 text-xs"
+                        disabled={demoTradeStep !== "locked"}
+                        onClick={() => {
+                          setDemoTradeStep("transferring");
+                          toast.info("Donor hardware supplying energy through local mesh server.");
+                          window.setTimeout(() => setDemoTradeStep("settled"), 1200);
+                        }}
+                      >
+                        <Zap className="h-3.5 w-3.5" />
+                        Transfer energy
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1.5 text-xs"
+                        disabled={demoTradeStep !== "settled"}
+                        onClick={() => {
+                          toast.success("Trade settled: energy delivered and donor credited.");
+                          setDemoTradeStep("open");
+                        }}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Settle
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

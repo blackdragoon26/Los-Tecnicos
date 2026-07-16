@@ -13,7 +13,7 @@ import {
 import stelltronLogo from "@/assets/stelltron-logo-new.png";
 
 export default function Navbar() {
-  const { isConnected, publicKey, disconnect, isDemo, demoBalance } = useWallet();
+  const { isConnected, publicKey, externalPublicKey, appWalletId, disconnect, isDemo, demoProfile, demoBalance } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -32,8 +32,9 @@ export default function Navbar() {
 
   const links = isConnected ? [...publicLinks, ...protectedLinks] : publicLinks;
 
-  const truncatedKey = publicKey
-    ? `${publicKey.slice(0, 4)}…${publicKey.slice(-4)}`
+  const accountLabel = appWalletId || publicKey || "";
+  const truncatedKey = accountLabel
+    ? `${accountLabel.slice(0, 4)}…${accountLabel.slice(-4)}`
     : "";
 
   return (
@@ -70,11 +71,16 @@ export default function Navbar() {
                     {truncatedKey}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent><p className="text-xs font-mono">{publicKey}</p></TooltipContent>
+                <TooltipContent>
+                  <div className="space-y-1">
+                    <p className="text-xs font-mono">{accountLabel}</p>
+                    {externalPublicKey && <p className="text-[10px] text-muted-foreground font-mono">funding: {externalPublicKey}</p>}
+                  </div>
+                </TooltipContent>
               </Tooltip>
               {isDemo && (
                 <Badge variant="outline" className="h-7 border-primary/30 text-[10px] text-primary">
-                  Demo {demoBalance.toFixed(2)} LT
+                  {demoProfile === "donor" ? "Donor" : "Receiver"} {demoBalance.toFixed(2)} LT
                 </Badge>
               )}
               <Button variant="ghost" size="icon" onClick={disconnect} className="h-7 w-7">
@@ -112,7 +118,7 @@ export default function Navbar() {
             {isConnected ? (
               <div className="flex items-center justify-between px-3">
                 <span className="text-xs font-mono text-muted-foreground">
-                  {isDemo ? `Demo ${demoBalance.toFixed(2)} LT` : truncatedKey}
+                  {isDemo ? `${demoProfile === "donor" ? "Donor" : "Receiver"} ${demoBalance.toFixed(2)} LT` : truncatedKey}
                 </span>
                 <Button variant="ghost" size="sm" onClick={disconnect} className="text-xs">
                   Disconnect
