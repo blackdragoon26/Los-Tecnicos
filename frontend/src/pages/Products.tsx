@@ -1,92 +1,45 @@
-import { Battery, Cpu, Wifi, Zap, Check } from "lucide-react";
+import { Battery, Check, Cpu, RadioTower, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWallet } from "@/contexts/WalletContext";
+import SimulationDisclosure from "@/components/SimulationDisclosure";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-
-const specs = [
-  "ESP32-S3 dual-core processor",
-  "WiFi + BLE connectivity",
-  "Smart BMS integration",
-  "Soroban contract bridge",
-  "Real-time voltage monitoring",
-  "OTA firmware updates",
-];
-
-const features = [
-  { icon: Wifi, title: "Always Connected", desc: "Seamless WiFi & MQTT for real-time trading." },
-  { icon: Battery, title: "Smart BMS", desc: "Protects battery health while maximizing efficiency." },
-  { icon: Zap, title: "Instant Settlement", desc: "Automated locking/unlocking based on payment." },
-  { icon: Cpu, title: "Open Source", desc: "Fully hackable and customizable firmware." },
-];
+import powerKit from "@/assets/stelltron-power-kit.png";
 
 export default function Products() {
+  const { isDemo, demoKit } = useWallet();
   return (
-    <div className="min-h-screen pt-20 pb-12 px-4">
-      <div className="container mx-auto max-w-4xl">
-        <div className="text-center mb-16">
-          <Badge variant="outline" className="text-[9px] font-mono tracking-widest mb-3 border-primary/30 text-primary">Hardware</Badge>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight mb-2">Stelltron Power Kit</h1>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            The essential hardware to join the decentralized energy network.
-          </p>
+    <main className="min-h-screen px-4 pb-16 pt-24">
+      <div className="container mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-xs uppercase tracking-widest text-primary">Hardware</p><h1 className="mt-2 text-3xl font-bold">Stelltron Power Kit</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">The physical donor-receiver controller that measures a household battery and switches verified power onto a local 5V prototype rail.</p></div>
+          <Badge variant="outline" className="border-primary/40 text-primary">50 LT</Badge>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mb-16">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="aspect-square w-full bg-secondary/50 rounded flex items-center justify-center">
-                <Cpu className="w-16 h-16 text-muted-foreground/50" />
-              </div>
-              <p className="text-[10px] text-center text-muted-foreground mt-3 font-mono uppercase tracking-widest">ESP32 + Battery Pack</p>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-foreground tracking-tight mb-2">Smart Energy Controller</h2>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our ESP32-based controller bridges your energy storage with the Stelltron network.
-                It monitors battery levels, executes trade settlements via Soroban smart contracts,
-                and controls energy flow automatically.
-              </p>
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <figure className="overflow-hidden rounded-md border border-border bg-card">
+            <img src={powerKit} alt="Stelltron prototype Power Kit with ESP32, relays, voltage sensor, converters, and 18650 cell" className="aspect-[4/3] h-full w-full object-cover" />
+            <figcaption className="border-t border-border px-4 py-3 text-xs text-muted-foreground">Photographed 5V/18650 prototype. Current transfers are Wh-scale laboratory demonstrations.</figcaption>
+          </figure>
+          <Card><CardContent className="space-y-5 pt-6">
+            <div className="grid grid-cols-2 gap-3"><Spec icon={Cpu} label="Controller" value="ESP32 DevKit" /><Spec icon={Battery} label="Storage" value="1 x 18650" /><Spec icon={RadioTower} label="Gateway" value="Raspberry Pi" /><Spec icon={ShoppingCart} label="Kit price" value="50 LT" /></div>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {["MAC-addressed registration", "Active-low receive and supply relays", "Voltage and state-of-charge telemetry", "Backend-verified transfer lifecycle"].map((item) => <p key={item} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{item}</p>)}
             </div>
-
-            <div className="space-y-1.5">
-              {specs.map((spec) => (
-                <div key={spec} className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-primary shrink-0" />
-                  <span className="text-[11px] text-muted-foreground">{spec}</span>
-                </div>
-              ))}
-            </div>
-
-            <Separator />
-
-            <div className="grid grid-cols-2 gap-3">
-              {features.map((f) => (
-                <div key={f.title} className="flex gap-2">
-                  <f.icon className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-foreground">{f.title}</h3>
-                    <p className="text-[10px] text-muted-foreground">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link to="/marketplace">
-                <Button className="gap-2 text-xs">
-                  <Zap className="w-3.5 h-3.5" /> Get the Kit — 50 XLM
-                </Button>
-              </Link>
-              <span className="text-[10px] text-muted-foreground">Required for Donor Nodes</span>
-            </div>
-          </div>
+            {isDemo && demoKit ? (
+              <div className="rounded border border-primary/30 bg-primary/10 p-3"><p className="text-xs font-semibold text-primary">Sample kit included with demo</p><p className="mt-1 font-mono text-xs">{demoKit.mac_address}</p><p className="text-[10px] text-muted-foreground">{demoKit.alias} - {demoKit.status}</p></div>
+            ) : <SimulationDisclosure text="Demo personas receive one isolated sample kit automatically" />}
+            <Button asChild className="w-full"><Link to={isDemo ? "/device/register" : "/"}>{isDemo ? "Register sample kit" : "Get the Kit - 50 LT"}</Link></Button>
+          </CardContent></Card>
         </div>
+
+        <section className="mt-14 border-t border-border pt-10"><h2 className="text-xl font-semibold">The second layer: mesh gateway</h2><p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">A Raspberry Pi gateway creates the local network, discovers Power Kits, accepts telemetry over TCP, and relays backend commands. Nearby gateways are intended to form a community mesh as the deployment grows. That mesh is a roadmap capability; the current verified prototype uses one Pi and three ESP32 nodes.</p></section>
       </div>
-    </div>
+    </main>
   );
+}
+
+function Spec({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+  return <div className="rounded border border-border bg-secondary/40 p-3"><Icon className="h-4 w-4 text-primary" /><p className="mt-3 text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p><p className="mt-1 text-xs font-semibold">{value}</p></div>;
 }

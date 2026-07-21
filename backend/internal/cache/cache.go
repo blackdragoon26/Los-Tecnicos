@@ -9,6 +9,7 @@ import (
 )
 
 var Rdb *redis.Client
+var Available bool
 
 // Connect initializes the Redis client.
 func Connect() error {
@@ -24,9 +25,11 @@ func Connect() error {
 	ctx := context.Background()
 	if _, err := Rdb.Ping(ctx).Result(); err != nil {
 		fmt.Printf("Warning: Failed to connect to redis at %s: %v. Continuing without cache.\n", addr, err)
+		Available = false
 		return nil
 	}
 
+	Available = true
 	fmt.Println("Redis connection successful.")
 	return nil
 }

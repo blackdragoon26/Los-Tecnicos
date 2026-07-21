@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { authApi } from "@/lib/api";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { appWalletApi, authApi, demoApi, type AppWallet, type DemoRole, type HardwareKit } from "@/lib/api";
 
 interface User {
   id: string;
@@ -14,16 +14,22 @@ interface WalletState {
   appWalletId: string | null;
   isConnected: boolean;
   isDemo: boolean;
-  demoProfile: "donor" | "receiver" | null;
+  demoProfile: DemoRole | null;
   demoBalance: number;
+  demoSessionId: string | null;
+  demoJoinCode: string | null;
+  demoKit: HardwareKit | null;
+  wallet: AppWallet | null;
   user: User | null;
   role: "donor" | "recipient" | "operator" | null;
   isAdmin: boolean;
   connect: () => Promise<void>;
-  connectDemo: (profile?: "donor" | "receiver") => Promise<void>;
-  switchDemoProfile: (profile: "donor" | "receiver") => Promise<void>;
+  connectDemo: (profile?: DemoRole) => Promise<void>;
+  joinDemo: (joinCode: string, profile: DemoRole) => Promise<void>;
+  switchDemoProfile: (profile: DemoRole) => Promise<void>;
+  refreshWallet: () => Promise<void>;
   disconnect: () => void;
-  topUpDemoBalance: (amount: number) => void;
+  topUpDemoBalance: (amount: number) => Promise<void>;
   debitDemoBalance: (amount: number) => boolean;
   setRole: (role: "donor" | "recipient" | "operator") => void;
   enableAdmin: () => void;
@@ -31,247 +37,121 @@ interface WalletState {
 }
 
 const WalletContext = createContext<WalletState | null>(null);
-const DEMO_PROFILES = {
-  donor: {
-    publicKey: "GA2HJIFIZFA5H2LT7CNGIYRYV5GPOUCAEYJEIVG7RQ7ABSX7SVYRFQEA",
-    walletId: "stelltron-demo-donor",
-    label: "Demo Donor",
-    role: "donor" as const,
-    initialBalance: 80,
-  },
-  receiver: {
-    publicKey: "GCDCKMQO5RZE2VX6HTLF6AWCWKS7L7G3ZH4F57URUMDJJDQTE2IR2R6Z",
-    walletId: "stelltron-demo-receiver",
-    label: "Demo Receiver",
-    role: "recipient" as const,
-    initialBalance: 350,
-  },
-};
-
-const demoBalanceKey = (profile: "donor" | "receiver") => `stelltron_demo_balance_${profile}`;
+const read = (key: string) => localStorage.getItem(key);
 
 export const useWallet = () => {
-  const ctx = useContext(WalletContext);
-  if (!ctx) throw new Error("useWallet must be used within WalletProvider");
-  return ctx;
+  const value = useContext(WalletContext);
+  if (!value) throw new Error("useWallet must be used within WalletProvider");
+  return value;
 };
 
-export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [externalPublicKey, setExternalPublicKey] = useState<string | null>(() =>
-    localStorage.getItem("stelltron_external_pk")
-  );
-  const [appWalletId, setAppWalletId] = useState<string | null>(() =>
-    localStorage.getItem("stelltron_app_wallet_id")
-  );
+export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
+  const [externalPublicKey, setExternalPublicKey] = useState<string | null>(() => read("stelltron_external_pk"));
+  const [appWalletId, setAppWalletId] = useState<string | null>(() => read("stelltron_app_wallet_id"));
+  const [isDemo, setIsDemo] = useState(() => read("stelltron_wallet_mode") === "demo");
+  const [demoProfile, setDemoProfile] = useState<DemoRole | null>(() => read("stelltron_demo_profile") as DemoRole | null);
+  const [demoSessionId, setDemoSessionId] = useState<string | null>(() => read("stelltron_demo_session_id"));
+  const [demoJoinCode, setDemoJoinCode] = useState<string | null>(() => read("stelltron_demo_join_code"));
+  const [wallet, setWallet] = useState<AppWallet | null>(null);
+  const [demoKit, setDemoKit] = useState<HardwareKit | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isDemo, setIsDemo] = useState(() => localStorage.getItem("stelltron_wallet_mode") === "demo");
-  const [demoProfile, setDemoProfile] = useState<"donor" | "receiver" | null>(() =>
-    (localStorage.getItem("stelltron_demo_profile") as "donor" | "receiver" | null) || null
-  );
-  const [demoBalance, setDemoBalance] = useState(() => {
-    const profile = (localStorage.getItem("stelltron_demo_profile") as "donor" | "receiver" | null) || "receiver";
-    return Number(localStorage.getItem(demoBalanceKey(profile)) || DEMO_PROFILES[profile].initialBalance);
-  });
-  const [role, setRoleState] = useState<"donor" | "recipient" | "operator" | null>(() =>
-    localStorage.getItem("stelltron_role") as any
-  );
+  const [role, setRoleState] = useState<"donor" | "recipient" | "operator" | null>(() => read("stelltron_role") as any);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const connect = useCallback(async () => {
-    try {
-      const freighterApi = await import("@stellar/freighter-api");
-
-      const connected = await freighterApi.isConnected();
-      if (!connected) {
-        throw new Error("FREIGHTER_NOT_INSTALLED");
-      }
-
-      const isAllowed = await freighterApi.isAllowed();
-      if (!isAllowed) {
-        await freighterApi.setAllowed();
-      }
-
-      const pk = await freighterApi.getPublicKey();
-      if (pk) {
-        setExternalPublicKey(pk);
-        setAppWalletId(`stelltron-wallet-${pk.slice(0, 8)}`);
-        setIsDemo(false);
-        setDemoProfile(null);
-        localStorage.removeItem("stelltron_demo_profile");
-        localStorage.setItem("stelltron_external_pk", pk);
-        localStorage.setItem("stelltron_app_wallet_id", `stelltron-wallet-${pk.slice(0, 8)}`);
-        localStorage.setItem("stelltron_wallet_mode", "web3");
-
-        // Attempt auth login/signup with backend
-        try {
-          const loginRes = await authApi.login(pk, "freighter_session");
-          if (loginRes.access_token) {
-            localStorage.setItem("access_token", loginRes.access_token);
-            if (loginRes.refresh_token) {
-              localStorage.setItem("refresh_token", loginRes.refresh_token);
-            }
-          }
-          // Fetch user profile
-          try {
-            const meRes = await authApi.me();
-            if (meRes) setUser(meRes);
-          } catch {}
-        } catch {
-          // Signup if login fails
-          try {
-            const signupRes = await authApi.signup(pk, "freighter_session");
-            if (signupRes.access_token) {
-              localStorage.setItem("access_token", signupRes.access_token);
-            }
-          } catch {}
-        }
-      } else {
-        throw new Error("No public key returned from Freighter");
-      }
-    } catch (err: any) {
-      console.error("Freighter connection failed:", err);
-      if (err?.message === "FREIGHTER_NOT_INSTALLED") {
-        throw new Error("Please install the Freighter wallet extension from freighter.app");
-      }
-      throw err;
-    }
+  const refreshWallet = useCallback(async () => {
+    if (!read("access_token")) return;
+    const [walletResult, kitResult] = await Promise.all([appWalletApi.get(), appWalletApi.kits()]);
+    setWallet(walletResult.wallet);
+    setAppWalletId(walletResult.wallet.id);
+    setDemoKit(kitResult.kits[0] || null);
   }, []);
 
-  const connectDemo = useCallback(async (profile: "donor" | "receiver" = "receiver") => {
-    const demo = DEMO_PROFILES[profile];
-    const pk = demo.publicKey;
-    const storedBalance = localStorage.getItem(demoBalanceKey(profile));
-    const nextBalance = storedBalance ? Number(storedBalance) : demo.initialBalance;
-
-    setExternalPublicKey(null);
-    setAppWalletId(demo.walletId);
-    setIsDemo(true);
-    setDemoProfile(profile);
-    setDemoBalance(nextBalance);
-    localStorage.setItem(demoBalanceKey(profile), String(nextBalance));
-    localStorage.removeItem("stelltron_external_pk");
-    localStorage.setItem("stelltron_app_wallet_id", demo.walletId);
+  const applyDemoPersona = useCallback(async (session: any, persona: any) => {
+    const nextRole: "donor" | "recipient" = persona.role === "donor" ? "donor" : "recipient";
+    localStorage.setItem("access_token", persona.access_token);
+    localStorage.removeItem("refresh_token");
     localStorage.setItem("stelltron_wallet_mode", "demo");
-    localStorage.setItem("stelltron_demo_profile", profile);
-    localStorage.setItem("stelltron_role", demo.role);
-    setRoleState(demo.role);
-
-    try {
-      let authRes: any;
-      try {
-        authRes = await authApi.login(pk, "freighter_session");
-      } catch {
-        authRes = await authApi.signup(pk, "freighter_session");
-      }
-
-      if (authRes.access_token) {
-        localStorage.setItem("access_token", authRes.access_token);
-      }
-      if (authRes.refresh_token) {
-        localStorage.setItem("refresh_token", authRes.refresh_token);
-      }
-
-      try {
-        const meRes = await authApi.me();
-        if (meRes) setUser(meRes);
-      } catch {
-        if (authRes.user) setUser(authRes.user);
-      }
-    } catch (err) {
-      setAppWalletId(null);
-      setIsDemo(false);
-      setDemoProfile(null);
-      localStorage.removeItem("stelltron_app_wallet_id");
-      localStorage.removeItem("stelltron_wallet_mode");
-      localStorage.removeItem("stelltron_demo_profile");
-      throw err;
-    }
+    localStorage.setItem("stelltron_demo_profile", persona.role);
+    localStorage.setItem("stelltron_demo_session_id", session.id);
+    localStorage.setItem("stelltron_demo_join_code", session.join_code);
+    localStorage.setItem("stelltron_app_wallet_id", persona.wallet.id);
+    localStorage.setItem("stelltron_role", nextRole);
+    localStorage.removeItem("stelltron_external_pk");
+    setExternalPublicKey(null);
+    setIsDemo(true);
+    setDemoProfile(persona.role);
+    setDemoSessionId(session.id);
+    setDemoJoinCode(session.join_code);
+    setAppWalletId(persona.wallet.id);
+    setWallet(persona.wallet);
+    setDemoKit(persona.kit);
+    setUser(persona.user);
+    setRoleState(nextRole);
   }, []);
 
-  const switchDemoProfile = useCallback(async (profile: "donor" | "receiver") => {
-    await connectDemo(profile);
-  }, [connectDemo]);
+  const connectDemo = useCallback(async (profile: DemoRole = "receiver") => {
+    const result = await demoApi.createSession();
+    await applyDemoPersona(result.session, result.personas[profile]);
+  }, [applyDemoPersona]);
 
-  const disconnect = useCallback(() => {
-    setExternalPublicKey(null);
-    setAppWalletId(null);
-    setRoleState(null);
-    setUser(null);
-    setIsAdmin(false);
+  const joinDemo = useCallback(async (joinCode: string, profile: DemoRole) => {
+    const result = await demoApi.joinSession(joinCode.trim().toUpperCase(), profile);
+    await applyDemoPersona(result.session, result.persona);
+  }, [applyDemoPersona]);
+
+  const switchDemoProfile = useCallback(async (profile: DemoRole) => {
+    if (!demoJoinCode) throw new Error("No active demo session");
+    await joinDemo(demoJoinCode, profile);
+  }, [demoJoinCode, joinDemo]);
+
+  const connect = useCallback(async () => {
+    const freighterApi = await import("@stellar/freighter-api");
+    if (!(await freighterApi.isConnected())) throw new Error("Please install Freighter from freighter.app");
+    if (!(await freighterApi.isAllowed())) await freighterApi.setAllowed();
+    const pk = await freighterApi.getPublicKey();
+    if (!pk) throw new Error("Freighter did not return an account");
+    let result: any;
+    try { result = await authApi.login(pk, "freighter_session"); }
+    catch { result = await authApi.signup(pk, "freighter_session"); }
+    if (result.access_token) localStorage.setItem("access_token", result.access_token);
+    if (result.refresh_token) localStorage.setItem("refresh_token", result.refresh_token);
+    localStorage.setItem("stelltron_external_pk", pk);
+    localStorage.setItem("stelltron_wallet_mode", "web3");
+    setExternalPublicKey(pk);
     setIsDemo(false);
     setDemoProfile(null);
-    localStorage.removeItem("stelltron_external_pk");
-    localStorage.removeItem("stelltron_app_wallet_id");
-    localStorage.removeItem("stelltron_role");
-    localStorage.removeItem("stelltron_wallet_mode");
-    localStorage.removeItem("stelltron_demo_profile");
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    setUser(result.user || null);
+    try { await refreshWallet(); } catch { /* A funding rail may connect before an app wallet exists. */ }
+  }, [refreshWallet]);
+
+  const topUpDemoBalance = useCallback(async (amount: number) => {
+    if (!isDemo || amount <= 0) return;
+    const result = await appWalletApi.topUp(amount, `topup:${demoSessionId}:${demoProfile}:${crypto.randomUUID()}`);
+    setWallet(result.wallet);
+  }, [demoProfile, demoSessionId, isDemo]);
+
+  const disconnect = useCallback(() => {
+    ["stelltron_external_pk", "stelltron_app_wallet_id", "stelltron_role", "stelltron_wallet_mode", "stelltron_demo_profile", "stelltron_demo_session_id", "stelltron_demo_join_code", "access_token", "refresh_token"].forEach((key) => localStorage.removeItem(key));
+    setExternalPublicKey(null); setAppWalletId(null); setIsDemo(false); setDemoProfile(null); setDemoSessionId(null); setDemoJoinCode(null); setWallet(null); setDemoKit(null); setUser(null); setRoleState(null); setIsAdmin(false);
   }, []);
 
-  const topUpDemoBalance = useCallback((amount: number) => {
-    if (!Number.isFinite(amount) || amount <= 0) return;
-    setDemoBalance((current) => {
-      const next = Number((current + amount).toFixed(2));
-      if (demoProfile) localStorage.setItem(demoBalanceKey(demoProfile), String(next));
-      return next;
-    });
-  }, [demoProfile]);
-
-  const debitDemoBalance = useCallback((amount: number) => {
-    if (!Number.isFinite(amount) || amount <= 0) return false;
-    let approved = false;
-    setDemoBalance((current) => {
-      if (current < amount) return current;
-      const next = Number((current - amount).toFixed(2));
-      if (demoProfile) localStorage.setItem(demoBalanceKey(demoProfile), String(next));
-      approved = true;
-      return next;
-    });
-    return approved;
-  }, [demoProfile]);
-
-  const setRole = useCallback((r: "donor" | "recipient" | "operator") => {
-    setRoleState(r);
-    localStorage.setItem("stelltron_role", r);
+  const setRole = useCallback((next: "donor" | "recipient" | "operator") => {
+    setRoleState(next); localStorage.setItem("stelltron_role", next);
   }, []);
 
-  const enableAdmin = useCallback(() => setIsAdmin(true), []);
-
-  // Re-hydrate user on mount if we have a token
   useEffect(() => {
-    if (appWalletId && localStorage.getItem("access_token")) {
-      authApi.me().then(setUser).catch(() => {});
-    }
-  }, []);
+    if (!read("access_token")) return;
+    refreshWallet().catch(() => disconnect());
+    authApi.me().then(setUser).catch(() => undefined);
+  }, [disconnect, refreshWallet]);
 
-  const publicKey = isDemo ? appWalletId : externalPublicKey;
+  const value = useMemo<WalletState>(() => ({
+    publicKey: isDemo ? appWalletId : externalPublicKey,
+    externalPublicKey, appWalletId, isConnected: Boolean(isDemo ? appWalletId : externalPublicKey), isDemo, demoProfile,
+    demoBalance: wallet?.balance || 0, demoSessionId, demoJoinCode, demoKit, wallet, user, role, isAdmin,
+    connect, connectDemo, joinDemo, switchDemoProfile, refreshWallet, disconnect, topUpDemoBalance,
+    debitDemoBalance: () => false, setRole, enableAdmin: () => setIsAdmin(true), setUser,
+  }), [appWalletId, connect, connectDemo, demoJoinCode, demoKit, demoProfile, demoSessionId, disconnect, externalPublicKey, isAdmin, isDemo, joinDemo, refreshWallet, role, setRole, switchDemoProfile, topUpDemoBalance, user, wallet]);
 
-  return (
-    <WalletContext.Provider
-      value={{
-        publicKey,
-        externalPublicKey,
-        appWalletId,
-        isConnected: !!publicKey,
-        isDemo,
-        demoProfile,
-        demoBalance,
-        user,
-        role,
-        isAdmin,
-        connect,
-        connectDemo,
-        switchDemoProfile,
-        disconnect,
-        topUpDemoBalance,
-        debitDemoBalance,
-        setRole,
-        enableAdmin,
-        setUser,
-      }}
-    >
-      {children}
-    </WalletContext.Provider>
-  );
+  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 };

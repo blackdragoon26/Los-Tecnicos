@@ -35,6 +35,20 @@ func SetupRoutes(router *gin.Engine) {
 			auth.GET("/me", AuthMiddleware(), Me)
 		}
 
+		// Public, transparently-labelled Delhi NCR digital twin.
+		demo := v1.Group("/demo")
+		{
+			demo.POST("/sessions", CreateDemoSession)
+			demo.POST("/sessions/join", JoinDemoSession)
+			demo.PATCH("/sessions/:id/speed", UpdateDemoSpeed)
+		}
+		simulation := v1.Group("/simulation")
+		{
+			simulation.GET("/snapshot", GetSimulationSnapshot)
+			simulation.GET("/timeseries", GetSimulationTimeSeries)
+		}
+		v1.GET("/market/rates", GetMarketRates)
+
 		// Public analytics routes
 		publicAnalytics := v1.Group("/analytics")
 		{
@@ -115,6 +129,30 @@ func SetupRoutes(router *gin.Engine) {
 			analytics := protected.Group("/analytics")
 			{
 				analytics.GET("/transactions", GetUserTransactions)
+			}
+
+			wallet := protected.Group("/wallet")
+			{
+				wallet.GET("", GetAppWallet)
+				wallet.POST("/demo-topup", TopUpDemoWallet)
+			}
+
+			kits := protected.Group("/kits")
+			{
+				kits.GET("", GetHardwareKits)
+				kits.POST("/register", RegisterHardwareKit)
+			}
+
+			trades := protected.Group("/trades")
+			{
+				trades.POST("/lock", LockDemoTrade)
+				trades.GET("/active", GetActiveDemoTrade)
+				trades.GET("/:id", GetDemoTrade)
+				trades.POST("/:id/start", StartDemoTrade)
+				trades.POST("/:id/settle", SettleDemoTrade)
+				trades.POST("/:id/cancel", CancelDemoTrade)
+				trades.POST("/:id/fault", FaultDemoTrade)
+				trades.POST("/:id/timeout", TimeoutDemoTrade)
 			}
 		}
 	}

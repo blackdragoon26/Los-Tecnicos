@@ -6,7 +6,7 @@ sidebar_label: Quickstart
 
 # Getting Started
 
-This guide walks through running the full Stelltron stack locally: smart contracts on Stellar testnet, Go backend, and Next.js frontend.
+This guide walks through running the Stelltron stack locally: Go backend, React/Vite frontend, Docusaurus docs, and optional Soroban contracts.
 
 ---
 

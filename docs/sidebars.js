@@ -18,6 +18,8 @@ const sidebars = {
       items: [
         'architecture/system-overview',
         'architecture/business-flow',
+        'architecture/digital-twin',
+        'architecture/wallet-and-trades',
       ],
     },
     {
@@ -41,8 +43,13 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'DeFi Protocol',
+      label: 'Experimental Labs',
       items: ['defi/defi-overview'],
+    },
+    {
+      type: 'category',
+      label: 'Company',
+      items: ['company/investors'],
     },
     {
       type: 'category',

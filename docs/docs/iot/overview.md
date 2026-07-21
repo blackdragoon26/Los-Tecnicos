@@ -8,6 +8,10 @@ sidebar_label: Overview
 
 The physical layer consists of ESP32 microcontrollers managing actual battery-to-battery energy transfer, orchestrated by a Raspberry Pi 4B acting as a local edge gateway. The Pi handles bidirectional communication between the hardware relay circuit and the cloud backend.
 
+![Photographed Stelltron Power Kit prototype](/img/stelltron-power-kit.png)
+
+The image shows the current Wh-scale 5V/18650 prototype. The 50-home Delhi NCR view is a separate digital-twin projection.
+
 ---
 
 ## Hardware Stack
@@ -20,6 +24,8 @@ The physical layer consists of ESP32 microcontrollers managing actual battery-to
 | 5V Boost Converter | Steps up battery voltage for transmission |
 | TP4056 Charger Module | Charges receiving battery |
 | Relay × 2 per node | GPIO-controlled SUPPLY and RECEIVE paths |
+
+The chipset MAC address is the canonical kit identity. Labels such as `NODE_A` remain friendly aliases only.
 
 ---
 
@@ -142,6 +148,8 @@ The Raspberry Pi sends two distinct payload types to `POST /iot/ping`:
 ```json
 {
   "device_id": "rpi-4b-prod-01",
+  "mac_address": "DC:A6:32:00:10:01",
+  "hardware_profile": "prototype_5v_18650",
   "status": "heartbeat"
 }
 ```
@@ -161,8 +169,8 @@ The Raspberry Pi sends two distinct payload types to `POST /iot/ping`:
     {"uid": "NODE_B", "voltage": 3.610}
   ],
   "nodes_detail": [
-    {"uid": "NODE_A", "ip": "192.168.1.101", "voltage": 3.921, "soc": 72.4, "state": "IDLE"},
-    {"uid": "NODE_B", "ip": "192.168.1.102", "voltage": 3.610, "soc": 28.1, "state": "IDLE"}
+    {"uid": "NODE_A", "mac_address": "78:21:84:BD:C9:64", "ip": "10.42.0.204", "voltage": 3.921, "soc": 72.4, "state": "IDLE", "source": "rpi_energy_grid"},
+    {"uid": "NODE_B", "mac_address": "02:B4:21:10:42:76", "ip": "10.42.0.76", "voltage": 3.610, "soc": 28.1, "state": "IDLE", "source": "rpi_energy_grid"}
   ]
 }
 ```

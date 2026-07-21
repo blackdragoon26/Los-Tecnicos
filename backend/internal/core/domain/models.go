@@ -25,31 +25,41 @@ type EnergyOrder struct {
 	TokenPrice float64   `json:"token_price" gorm:"not null"`
 	Status     string    `json:"status" gorm:"not null"` // e.g., Created, Matched, Executing, Completed, Cancelled
 	CreatedAt  time.Time `json:"created_at"`
+	SessionID  string    `json:"session_id" gorm:"index"`
 }
 
 // IoTDevice represents a registered IoT device (ESP32 or Raspberry Pi).
 type IoTDevice struct {
-	ID           string    `json:"id"`
-	OwnerID      string    `json:"owner_id" gorm:"not null"`
-	DeviceType   string    `json:"device_type" gorm:"not null"` // "esp32" or "raspi"
-	Location     string    `json:"location"`
-	BatteryLevel float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge), normalized from Pi's 0-100
-	LastPing     time.Time `json:"last_ping"`
-	Status       string    `json:"status" gorm:"not null"` // e.g., online, offline
-	State        string    `json:"state"`                  // IDLE, CHARGING, FAULT, etc. from real Pi
-	Source       string    `json:"source"`                 // e.g., "rpi_energy_grid"
+	ID              string    `json:"id"`
+	OwnerID         string    `json:"owner_id" gorm:"not null"`
+	DeviceType      string    `json:"device_type" gorm:"not null"` // "esp32" or "raspi"
+	Location        string    `json:"location"`
+	BatteryLevel    float64   `json:"battery_level"` // 0.0 to 1.0 (State of Charge), normalized from Pi's 0-100
+	LastPing        time.Time `json:"last_ping"`
+	Status          string    `json:"status" gorm:"not null"` // e.g., online, offline
+	State           string    `json:"state"`                  // IDLE, CHARGING, FAULT, etc. from real Pi
+	Source          string    `json:"source"`                 // e.g., "rpi_energy_grid"
+	MACAddress      string    `json:"mac_address" gorm:"index"`
+	Latitude        float64   `json:"latitude"`
+	Longitude       float64   `json:"longitude"`
+	HardwareProfile string    `json:"hardware_profile"`
+	SessionID       string    `json:"session_id" gorm:"index"`
 }
 
 // NodeDetail stores per-node telemetry from the Raspberry Pi mesh network.
 type NodeDetail struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	DeviceID  string    `json:"device_id" gorm:"index;not null"` // FK to IoTDevice.ID (the Pi that reported this)
-	UID       string    `json:"uid" gorm:"not null"`             // NODE_A, NODE_B, etc.
-	IP        string    `json:"ip"`
-	Voltage   float64   `json:"voltage"`
-	SoC       float64   `json:"soc"`   // 0-100 raw percentage
-	State     string    `json:"state"` // IDLE, FAULT, etc.
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         uint      `json:"id" gorm:"primaryKey"`
+	DeviceID   string    `json:"device_id" gorm:"index;not null"` // FK to IoTDevice.ID (the Pi that reported this)
+	UID        string    `json:"uid" gorm:"not null"`             // NODE_A, NODE_B, etc.
+	IP         string    `json:"ip"`
+	Voltage    float64   `json:"voltage"`
+	SoC        float64   `json:"soc"`   // 0-100 raw percentage
+	State      string    `json:"state"` // IDLE, FAULT, etc.
+	UpdatedAt  time.Time `json:"updated_at"`
+	MACAddress string    `json:"mac_address" gorm:"index"`
+	Latitude   float64   `json:"latitude"`
+	Longitude  float64   `json:"longitude"`
+	Source     string    `json:"source"`
 }
 
 // Transaction represents a completed energy trade.
@@ -62,6 +72,86 @@ type Transaction struct {
 	BlockchainHash string    `json:"blockchain_hash" gorm:"unique"`
 	Status         string    `json:"status" gorm:"not null"` // e.g., Pending, Confirmed, Failed
 	Timestamp      time.Time `json:"timestamp"`
+	SessionID      string    `json:"session_id" gorm:"index"`
+	Unit           string    `json:"unit" gorm:"default:'LT'"`
+}
+
+type DemoSession struct {
+	ID               string    `json:"id" gorm:"primaryKey"`
+	JoinCode         string    `json:"join_code" gorm:"uniqueIndex"`
+	SpeedMode        string    `json:"speed_mode" gorm:"default:'pitch'"`
+	SpeedMultiplier  float64   `json:"speed_multiplier" gorm:"default:120"`
+	SimulatedStartAt time.Time `json:"simulated_start_at"`
+	CreatedAt        time.Time `json:"created_at"`
+	ExpiresAt        time.Time `json:"expires_at" gorm:"index"`
+}
+
+type AppWallet struct {
+	ID            string    `json:"id" gorm:"primaryKey"`
+	UserID        string    `json:"user_id" gorm:"uniqueIndex;not null"`
+	SessionID     string    `json:"session_id" gorm:"index"`
+	Balance       float64   `json:"balance"`
+	EscrowBalance float64   `json:"escrow_balance"`
+	Currency      string    `json:"currency" gorm:"default:'LT'"`
+	IsDemo        bool      `json:"is_demo"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type WalletLedgerEntry struct {
+	ID             string    `json:"id" gorm:"primaryKey"`
+	WalletID       string    `json:"wallet_id" gorm:"index;not null"`
+	SessionID      string    `json:"session_id" gorm:"index"`
+	TradeID        string    `json:"trade_id" gorm:"index"`
+	EntryType      string    `json:"entry_type"`
+	Amount         float64   `json:"amount"`
+	BalanceAfter   float64   `json:"balance_after"`
+	EscrowAfter    float64   `json:"escrow_after"`
+	IdempotencyKey string    `json:"idempotency_key" gorm:"uniqueIndex"`
+	Description    string    `json:"description"`
+	CreatedAt      time.Time `json:"created_at" gorm:"index"`
+}
+
+type HardwareKit struct {
+	ID              string    `json:"id" gorm:"primaryKey"`
+	MACAddress      string    `json:"mac_address" gorm:"uniqueIndex;not null"`
+	Alias           string    `json:"alias"`
+	UserID          string    `json:"user_id" gorm:"index"`
+	SessionID       string    `json:"session_id" gorm:"index"`
+	Location        string    `json:"location"`
+	Latitude        float64   `json:"latitude"`
+	Longitude       float64   `json:"longitude"`
+	HardwareProfile string    `json:"hardware_profile"`
+	Status          string    `json:"status"`
+	IsDemo          bool      `json:"is_demo"`
+	RegisteredAt    time.Time `json:"registered_at"`
+}
+
+type EnergyTrade struct {
+	ID               string     `json:"id" gorm:"primaryKey"`
+	SessionID        string     `json:"session_id" gorm:"index"`
+	DonorWalletID    string     `json:"donor_wallet_id" gorm:"index"`
+	ReceiverWalletID string     `json:"receiver_wallet_id" gorm:"index"`
+	DonorMAC         string     `json:"donor_mac"`
+	ReceiverMAC      string     `json:"receiver_mac"`
+	InputWh          float64    `json:"input_wh"`
+	UsableWh         float64    `json:"usable_wh"`
+	LossWh           float64    `json:"loss_wh"`
+	PricePerKwh      float64    `json:"price_per_kwh"`
+	TokenAmount      float64    `json:"token_amount"`
+	State            string     `json:"state" gorm:"index"`
+	ProgressPct      float64    `json:"progress_pct"`
+	BusVoltage       float64    `json:"bus_voltage"`
+	CurrentMa        float64    `json:"current_ma"`
+	EfficiencyPct    float64    `json:"efficiency_pct"`
+	TrueEtaSeconds   int64      `json:"true_eta_seconds"`
+	DemoEtaSeconds   int64      `json:"demo_eta_seconds"`
+	FailureReason    string     `json:"failure_reason"`
+	CreatedAt        time.Time  `json:"created_at"`
+	LockedAt         *time.Time `json:"locked_at"`
+	StartedAt        *time.Time `json:"started_at"`
+	DeliveredAt      *time.Time `json:"delivered_at"`
+	SettledAt        *time.Time `json:"settled_at"`
 }
 
 // NetworkNode represents a Raspberry Pi node in the mesh network.

@@ -156,3 +156,87 @@
 ::-webkit-scrollbar-track { background: hsl(var(--background)); }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
+
+@layer components {
+  .hero-shell {
+    min-height: min(760px, calc(100vh - 3.5rem));
+    display: flex;
+    align-items: center;
+    background:
+      linear-gradient(90deg, hsl(var(--background) / 0.98), hsl(var(--background) / 0.82)),
+      radial-gradient(circle at 85% 20%, hsl(var(--primary) / 0.12), transparent 42%);
+  }
+
+  .metric-panel {
+    min-height: 104px;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background: hsl(var(--card));
+    padding: 1rem;
+    overflow: hidden;
+  }
+
+  .avatar-token {
+    display: grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid hsl(var(--primary) / 0.45);
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+
+  .responsive-table {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .topology-map {
+    position: relative;
+    width: 100%;
+    min-height: 520px;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background:
+      linear-gradient(hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.28) 1px, transparent 1px),
+      hsl(var(--background) / 0.52);
+    background-size: 48px 48px;
+  }
+
+  .topology-node {
+    position: absolute;
+    z-index: 2;
+    display: grid;
+    width: 25px;
+    height: 25px;
+    translate: -50% -50%;
+    place-items: center;
+    border: 2px solid hsl(var(--background));
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px hsl(var(--border));
+    color: hsl(var(--primary-foreground));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    transition: transform 150ms ease;
+  }
+
+  .topology-node:hover,
+  .topology-node:focus-visible { z-index: 5; transform: scale(1.45); outline: none; }
+  .topology-supplying { background: hsl(var(--primary)); }
+  .topology-receiving { background: rgb(56 189 248); }
+  .topology-idle { background: rgb(113 113 122); }
+  .topology-label { position: absolute; z-index: 1; translate: -50% -50%; color: hsl(var(--muted-foreground) / 0.72); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0; }
+}
+
+@media (max-width: 640px) {
+  .hero-shell { min-height: auto; }
+  .topology-map { min-height: 380px; aspect-ratio: 3 / 4; }
+  .metric-panel { min-height: 92px; padding: 0.75rem; }
+}

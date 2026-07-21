@@ -77,6 +77,79 @@ async function request<T>(endpoint: string, options?: RequestInit, isRoot = fals
   return res.json();
 }
 
+export type DemoRole = "donor" | "receiver";
+
+export interface DemoPersona {
+  role: DemoRole;
+  access_token: string;
+  user: { id: string; wallet_address: string; role: string; kyc_status: string };
+  wallet: AppWallet;
+  kit: HardwareKit;
+}
+
+export interface AppWallet {
+  id: string;
+  user_id: string;
+  session_id: string;
+  balance: number;
+  escrow_balance: number;
+  currency: "LT";
+  is_demo: boolean;
+}
+
+export interface HardwareKit {
+  id: string;
+  mac_address: string;
+  alias: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  hardware_profile: string;
+  status: string;
+}
+
+export interface EnergyTrade {
+  id: string;
+  session_id: string;
+  donor_mac: string;
+  receiver_mac: string;
+  input_wh: number;
+  usable_wh: number;
+  loss_wh: number;
+  price_per_kwh: number;
+  token_amount: number;
+  state: "funds_locked" | "transferring" | "delivered" | "settled" | "cancelled" | "fault" | "timeout";
+  progress_pct: number;
+  bus_voltage: number;
+  current_ma: number;
+  efficiency_pct: number;
+  true_eta_seconds: number;
+  demo_eta_seconds: number;
+  failure_reason?: string;
+  started_at?: string;
+}
+
+export interface SimulationSnapshot {
+  mode: "simulation";
+  disclosure: string;
+  region: string;
+  session_id?: string;
+  speed_mode: "realtime" | "10x" | "pitch";
+  speed_multiplier: number;
+  simulated_at: string;
+  weather: { temperature_c: number; cloud_cover_pct: number; is_day: boolean; source: string; observed_at: string };
+  households: Array<{ id: string; alias: string; mac_address: string; region: string; latitude: number; longitude: number; solar_capacity_kw: number; battery_capacity_kwh: number; demand_kw: number; production_kw: number; soc: number; efficiency_pct: number; reliability_pct: number; state: "SUPPLYING" | "RECEIVING" | "IDLE" }>;
+  supply_count: number;
+  demand_count: number;
+  idle_count: number;
+  average_soc: number;
+  total_production_kw: number;
+  total_demand_kw: number;
+  active_transfers: number;
+  price_lt_per_kwh: number;
+  price_breakdown: { base_price: number; f_sd: number; f_soc: number; f_dist: number; f_time: number; f_reliability: number; final_price: number };
+}
+
 // Auth
 export const authApi = {
   signup: (wallet_address: string, signature: string) =>
@@ -157,5 +230,53 @@ export const fiatApi = {
     }),
 };
 
+export const demoApi = {
+  createSession: () => request<any>("/demo/sessions", { method: "POST", body: "{}" }),
+  joinSession: (join_code: string, role: DemoRole) => request<any>("/demo/sessions/join", {
+    method: "POST",
+    body: JSON.stringify({ join_code, role }),
+  }),
+  setSpeed: (sessionId: string, mode: "realtime" | "10x" | "pitch") => request<any>(`/demo/sessions/${sessionId}/speed`, {
+    method: "PATCH",
+    body: JSON.stringify({ mode }),
+  }),
+};
+
+export const simulationApi = {
+  snapshot: (sessionId?: string) => request<SimulationSnapshot>(`/simulation/snapshot${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
+  timeSeries: (sessionId?: string) => request<any>(`/simulation/timeseries${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
+};
+
+export const appWalletApi = {
+  get: () => request<{ wallet: AppWallet; ledger: any[] }>("/wallet"),
+  topUp: (amount: number, idempotency_key: string) => request<{ wallet: AppWallet }>("/wallet/demo-topup", {
+    method: "POST",
+    body: JSON.stringify({ amount, idempotency_key }),
+  }),
+  kits: () => request<{ kits: HardwareKit[] }>("/kits"),
+  registerKit: (mac_address: string, alias: string) => request<{ kit: HardwareKit }>("/kits/register", {
+    method: "POST",
+    body: JSON.stringify({ mac_address, alias }),
+  }),
+};
+
+export const tradeApi = {
+  active: (sessionId: string) => request<{ trade: EnergyTrade | null }>(`/trades/active?session_id=${encodeURIComponent(sessionId)}`),
+  lock: (session_id: string, input_wh = 6) => request<{ trade: EnergyTrade }>("/trades/lock", {
+    method: "POST",
+    body: JSON.stringify({ session_id, input_wh, idempotency_key: `lock:${session_id}:${Date.now()}` }),
+  }),
+  get: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}`),
+  start: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}/start`, { method: "POST", body: "{}" }),
+  settle: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}/settle`, { method: "POST", body: "{}" }),
+  cancel: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}/cancel`, { method: "POST", body: "{}" }),
+  fault: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}/fault`, { method: "POST", body: "{}" }),
+  timeout: (id: string) => request<{ trade: EnergyTrade }>(`/trades/${id}/timeout`, { method: "POST", body: "{}" }),
+};
+
+export const ratesApi = {
+  get: () => request<any>("/market/rates"),
+};
+
 // Convenience re-export
-export const api = { authApi, marketApi, iotApi, analyticsApi, fiatApi };
+export const api = { authApi, marketApi, iotApi, analyticsApi, fiatApi, demoApi, simulationApi, appWalletApi, tradeApi, ratesApi };

@@ -85,7 +85,7 @@ pub fn match_orders(env: Env, sell_id: u64, buy_id: u64)
 // Admin validates matching conditions and executes settlement
 
 pub fn calculate_yield(env: Env, amount: i128) -> i128
-// Returns 5% APY yield on amount (simulated DeFi yield)
+// Historical experimental yield helper; not exposed as a production product claim
 
 pub fn get_order(env: Env, order_id: u64) -> Order
 ```

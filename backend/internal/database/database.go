@@ -63,6 +63,11 @@ func Connect() (*gorm.DB, error) {
 		&domain.FlashLoan{},
 		&domain.CarbonCredit{},
 		&domain.DePINNode{},
+		&domain.DemoSession{},
+		&domain.AppWallet{},
+		&domain.WalletLedgerEntry{},
+		&domain.HardwareKit{},
+		&domain.EnergyTrade{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)

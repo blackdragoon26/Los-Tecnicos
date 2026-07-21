@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -132,11 +133,15 @@ type ConnectedNodeInfo struct {
 
 // NodeDetailInfo is the rich per-node data in nodes_detail array.
 type NodeDetailInfo struct {
-	UID     string  `json:"uid"`
-	IP      string  `json:"ip"`
-	Voltage float64 `json:"voltage"`
-	SoC     float64 `json:"soc"`
-	State   string  `json:"state"`
+	UID        string  `json:"uid"`
+	IP         string  `json:"ip"`
+	MACAddress string  `json:"mac_address"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	Voltage    float64 `json:"voltage"`
+	SoC        float64 `json:"soc"`
+	State      string  `json:"state"`
+	Source     string  `json:"source"`
 }
 
 // PiPingPayload handles BOTH payload types from the real Pi.
@@ -157,6 +162,11 @@ type PiPingPayload struct {
 	State               string              `json:"state,omitempty"`     // IDLE, CHARGING, FAULT
 	Timestamp           string              `json:"timestamp,omitempty"` // ISO 8601 from Pi
 	Source              string              `json:"source,omitempty"`    // "rpi_energy_grid"
+	MACAddress          string              `json:"mac_address,omitempty"`
+	Latitude            float64             `json:"latitude,omitempty"`
+	Longitude           float64             `json:"longitude,omitempty"`
+	HardwareProfile     string              `json:"hardware_profile,omitempty"`
+	SessionID           string              `json:"session_id,omitempty"`
 	NodesDetail         []NodeDetailInfo    `json:"nodes_detail,omitempty"`
 }
 
@@ -312,14 +322,19 @@ func HandleIoTPing(c *gin.Context) {
 		if err != nil {
 			// Auto-register new device
 			device = domain.IoTDevice{
-				ID:           p.DeviceID,
-				OwnerID:      "auto-registered",
-				DeviceType:   "raspi",
-				BatteryLevel: p.BatteryLevel / 100.0, // normalize 0-100 → 0.0-1.0
-				LastPing:     time.Now(),
-				Status:       "online",
-				State:        p.State,
-				Source:       p.Source,
+				ID:              p.DeviceID,
+				OwnerID:         "auto-registered",
+				DeviceType:      "raspi",
+				BatteryLevel:    p.BatteryLevel / 100.0, // normalize 0-100 → 0.0-1.0
+				LastPing:        time.Now(),
+				Status:          "online",
+				State:           p.State,
+				Source:          p.Source,
+				MACAddress:      strings.ToUpper(p.MACAddress),
+				Latitude:        p.Latitude,
+				Longitude:       p.Longitude,
+				HardwareProfile: p.HardwareProfile,
+				SessionID:       p.SessionID,
 			}
 			if createErr := database.DB.Create(&device).Error; createErr != nil {
 				log.Printf("[IoT-PING] ⚠️ Could not auto-register device %s: %v", p.DeviceID, createErr)
@@ -333,6 +348,11 @@ func HandleIoTPing(c *gin.Context) {
 			device.Status = "online"
 			device.State = p.State
 			device.Source = p.Source
+			device.MACAddress = strings.ToUpper(p.MACAddress)
+			device.Latitude = p.Latitude
+			device.Longitude = p.Longitude
+			device.HardwareProfile = p.HardwareProfile
+			device.SessionID = p.SessionID
 			database.DB.Save(&device)
 		}
 
@@ -343,13 +363,17 @@ func HandleIoTPing(c *gin.Context) {
 			if err != nil {
 				// Create new
 				newNode := domain.NodeDetail{
-					DeviceID:  p.DeviceID,
-					UID:       nd.UID,
-					IP:        nd.IP,
-					Voltage:   nd.Voltage,
-					SoC:       nd.SoC,
-					State:     nd.State,
-					UpdatedAt: time.Now(),
+					DeviceID:   p.DeviceID,
+					UID:        nd.UID,
+					IP:         nd.IP,
+					Voltage:    nd.Voltage,
+					SoC:        nd.SoC,
+					State:      nd.State,
+					MACAddress: strings.ToUpper(nd.MACAddress),
+					Latitude:   nd.Latitude,
+					Longitude:  nd.Longitude,
+					Source:     nd.Source,
+					UpdatedAt:  time.Now(),
 				}
 				database.DB.Create(&newNode)
 			} else {
@@ -358,6 +382,10 @@ func HandleIoTPing(c *gin.Context) {
 				existing.Voltage = nd.Voltage
 				existing.SoC = nd.SoC
 				existing.State = nd.State
+				existing.MACAddress = strings.ToUpper(nd.MACAddress)
+				existing.Latitude = nd.Latitude
+				existing.Longitude = nd.Longitude
+				existing.Source = nd.Source
 				existing.UpdatedAt = time.Now()
 				database.DB.Save(&existing)
 			}

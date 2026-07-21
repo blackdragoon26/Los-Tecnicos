@@ -9,10 +9,10 @@ const darkCodeTheme = themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Stelltron",
-  tagline: "Peer-to-peer solar energy trading on Stellar",
+  tagline: "Household energy infrastructure for local sharing",
   favicon: "img/logo.png",
 
-  url: "https://los-tecnicos.vercel.app",
+  url: "https://stelltron-docs.vercel.app",
   baseUrl: "/",
 
   organizationName: "blackdragoon26",

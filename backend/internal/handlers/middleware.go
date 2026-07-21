@@ -51,6 +51,10 @@ func AuthMiddleware() gin.HandlerFunc {
 // RateLimiter middleware uses a fixed window counter to limit requests.
 func RateLimiter(limit int, window time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if !cache.Available || cache.Rdb == nil {
+			c.Next()
+			return
+		}
 		key := "rate_limit:" + c.ClientIP()
 
 		// Use a pipeline to make it an atomic operation
@@ -101,7 +105,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

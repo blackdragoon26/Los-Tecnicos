@@ -218,7 +218,11 @@ func Login(c *gin.Context) {
 }
 
 func createAccessToken(user *domain.User) (string, error) {
-	expirationTime := time.Now().Add(15 * time.Minute) // 15-minute access token
+	tokenLifetime := 15 * time.Minute
+	if user.KYCStatus == "demo" {
+		tokenLifetime = 12 * time.Hour
+	}
+	expirationTime := time.Now().Add(tokenLifetime)
 	claims := &Claims{
 		UserID: user.ID,
 		Role:   user.Role,
