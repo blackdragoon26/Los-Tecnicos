@@ -150,6 +150,22 @@ export interface SimulationSnapshot {
   price_breakdown: { base_price: number; f_sd: number; f_soc: number; f_dist: number; f_time: number; f_reliability: number; final_price: number };
 }
 
+export interface SimulationTimeSeriesPoint {
+  timestamp: string;
+  price_lt_per_kwh: number;
+  production_kw: number;
+  demand_kw: number;
+  average_soc: number;
+  supply_count: number;
+  demand_count: number;
+}
+
+export interface SimulationTimeSeries {
+  mode: "simulation";
+  unit: "LT/kWh";
+  points: SimulationTimeSeriesPoint[];
+}
+
 // Auth
 export const authApi = {
   signup: (wallet_address: string, signature: string) =>
@@ -244,7 +260,7 @@ export const demoApi = {
 
 export const simulationApi = {
   snapshot: (sessionId?: string) => request<SimulationSnapshot>(`/simulation/snapshot${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
-  timeSeries: (sessionId?: string) => request<any>(`/simulation/timeseries${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
+  timeSeries: (sessionId?: string) => request<SimulationTimeSeries>(`/simulation/timeseries${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`),
 };
 
 export const appWalletApi = {

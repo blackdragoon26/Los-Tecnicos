@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WalletProvider } from "@/contexts/WalletContext";
 import Navbar from "@/components/Navbar";
 import EnergyBackground from "@/components/EnergyBackground";
-import IoTConsoleLogger from "@/components/IoTConsoleLogger";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "@/pages/Landing";
 // RoleSelect is now inline in Dashboard
@@ -31,7 +30,6 @@ const App = () => (
         <BrowserRouter>
           <EnergyBackground />
           <Navbar />
-          <IoTConsoleLogger />
           <Toaster />
           <Sonner />
           <Routes>
